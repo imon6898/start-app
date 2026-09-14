@@ -1,0 +1,888 @@
+import 'dart:async';
+import 'dart:io';
+import 'package:dio/dio.dart' as res;
+import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:pretty_dio_devPrintger/pretty_dio_devPrintger.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import '../../routes/app_routes.dart';
+import '../../utils/constants/app_assets.dart';
+import '../../utils/constants/app_colors.dart';
+import '../../widgets/custom_snack_bar.dart';
+import '../../widgets/custom_success_showmodal.dart';
+import '../local_data/cache_manager.dart';
+import 'api_const.dart';
+import 'dev_tools.dart';
+
+class ApiService {
+  late Dio _dio;
+  static bool _isRefreshing = false;
+  static Completer<bool>? _refreshCompleter;
+
+  ApiService({bool? googleBaseUrl, bool? devPrintisticsBaseUrl}) {
+    BaseOptions options = BaseOptions(
+      baseUrl: devPrintisticsBaseUrl == true
+          ? (kDebugMode ? ApiConstant.devdevPrintisticsBaseUrl : ApiConstant.devPrintisticsBaseUrl)
+          : kDebugMode
+              ? googleBaseUrl == true
+                    ? ApiConstant.googleBaseUrl
+                    : ApiConstant.devBaseUrl
+              : googleBaseUrl == true
+              ? ApiConstant.googleBaseUrl
+              : ApiConstant.baseUrl,
+      receiveTimeout: const Duration(seconds: 50),
+      connectTimeout: const Duration(seconds: 50),
+    );
+
+    options.headers['Accept'] = 'application/json';
+    options.headers['Content-Type'] = 'application/json';
+
+    try {
+      devPrint("token: ${CacheManager.token}");
+      options.headers["Authorization"] = "Bearer ${CacheManager.token}";
+    } catch (e) {
+      devPrint("Authorization header error = $e");
+    }
+
+    _dio = Dio(options);
+    _dio.httpClientAdapter = IOHttpClientAdapter(
+      createHttpClient: () {
+        HttpClient client = HttpClient();
+        client.badCertificateCallback =
+            (X509Certificate cert, String host, int port) => kDebugMode;
+        return client;
+      },
+    );
+
+    // Add token refresh interceptor
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          // Always use the latest token from cache for each request
+          final token = CacheManager.token;
+          if (token != null && token.isNotEmpty) {
+            options.headers["Authorization"] = "Bearer $token";
+          }
+          handler.next(options);
+        },
+        onError: (DioException error, ErrorInterceptorHandler handler) async {
+          if (error.response?.statusCode != 401) {
+            return handler.next(error);
+          }
+
+          // Skip if this is already a retried request (prevent infinite loop)
+          if (error.requestOptions.extra['isRetry'] == true) {
+            return handler.next(error);
+          }
+
+          // Skip refresh for guest users (no refresh token)
+          final refreshToken = CacheManager.refreshToken;
+          if (refreshToken == null || refreshToken.isEmpty) {
+            return handler.next(error);
+          }
+
+          // If already refreshing, wait for the ongoing refresh to finish
+          if (_isRefreshing) {
+            try {
+              final success = await _refreshCompleter?.future ?? false;
+              if (success) {
+                // Retry with new token
+                final opts = error.requestOptions;
+                opts.headers["Authorization"] = "Bearer ${CacheManager.token}";
+                opts.extra['isRetry'] = true;
+                final retryResponse = await _dio.fetch(opts);
+                return handler.resolve(retryResponse);
+              } else {
+                return handler.next(error);
+              }
+            } catch (e) {
+              return handler.next(error);
+            }
+          }
+
+          // Start refreshing
+          _isRefreshing = true;
+          final completer = Completer<bool>();
+          _refreshCompleter = completer;
+
+          bool refreshed = false;
+          try {
+            refreshed = await _refreshToken();
+          } catch (e) {
+            devPrint("Token refresh error: $e");
+            refreshed = false;
+          } finally {
+            if (!completer.isCompleted) completer.complete(refreshed);
+            _isRefreshing = false;
+          }
+
+          if (!refreshed) {
+            await _handleSessionExpired();
+            return handler.next(error);
+          }
+
+          // Refresh succeeded — retry the original request with the new token.
+          // A retry failure here is NOT a refresh failure: don't sign the user
+          // out. Just bubble the error up so the caller can handle it.
+          try {
+            final opts = error.requestOptions;
+            opts.headers["Authorization"] = "Bearer ${CacheManager.token}";
+            opts.extra['isRetry'] = true;
+            final retryResponse = await _dio.fetch(opts);
+            return handler.resolve(retryResponse);
+          } catch (e) {
+            devPrint("Retry after refresh failed: $e");
+            return handler.next(error);
+          }
+        },
+      ),
+    );
+
+    if (kDebugMode) {
+      _dio.interceptors.add(
+        PrettyDiodevPrintger(
+          requestHeader: false,
+          requestBody: true,
+          responseBody: true,
+          responseHeader: false,
+          error: true,
+          compact: true,
+          maxWidth: 290,
+        ),
+      );
+    }
+  }
+
+  /// Calls the refresh token API and updates stored tokens
+  static Future<bool> _refreshToken() async {
+    try {
+      final refreshToken = CacheManager.refreshToken;
+
+      if (refreshToken == null || refreshToken.isEmpty) {
+        devPrint("No refresh token available");
+        return false;
+      }
+
+      devPrint("Attempting token refresh...");
+
+      final baseUrl = kDebugMode ? ApiConstant.devBaseUrl : ApiConstant.baseUrl;
+      final refreshDio = Dio(BaseOptions(
+        baseUrl: baseUrl,
+        receiveTimeout: const Duration(seconds: 30),
+        connectTimeout: const Duration(seconds: 30),
+      ));
+
+      final response = await refreshDio.get(
+        ApiConstant.refreshTokenUri,
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $refreshToken',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = response.data;
+        if (responseData == null) {
+          devPrint("Token refresh failed: null response data");
+          return false;
+        }
+
+        // Handle both nested (data.access_token) and flat (access_token) response structures
+        final data = responseData['data'] ?? responseData;
+        final newAccessToken = data['access_token'] as String?;
+        final newRefreshToken = data['refresh_token'] as String?;
+
+        if (newAccessToken != null && newAccessToken.isNotEmpty) {
+          await CacheManager.setToken(newAccessToken);
+          devPrint("Access token refreshed successfully");
+        }
+        if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
+          await CacheManager.setRefreshToken(newRefreshToken);
+          devPrint("Refresh token updated successfully");
+        }
+
+        if (newAccessToken != null && newAccessToken.isNotEmpty) {
+          return true;
+        }
+      }
+
+      devPrint("Token refresh failed: unexpected response (status: ${response.statusCode})");
+      return false;
+    } catch (e) {
+      devPrint("Token refresh failed: $e");
+      return false;
+    }
+  }
+
+  /// Clears tokens and navigates to sign-in screen
+  static Future<void> _handleSessionExpired() async {
+    devPrint("Session expired, clearing data and navigating to sign-in");
+    await CacheManager.removeToken();
+    await CacheManager.removeRefreshToken();
+    await CacheManager.removeUserData();
+    // Defer navigation to avoid calling it during a build/frame cycle
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Get.offAllNamed(AppRoutes.SigninScreen);
+    });
+  }
+
+  Future<dynamic> get(
+    String endpoint, {
+    Map<String, dynamic>? params,
+    Map<String, dynamic>? data,
+  }) async {
+    //check internet connection
+    if (!await checkInternet()) {
+      showCustomSnackBar(
+        context: Get.context!,
+        type: SnackBarType.Warning,
+        title: "No internet connection",
+        description: 'Please check your internet connection',
+      );
+      return null;
+    }
+
+    res.Response response;
+    try {
+      // If params are passed, they will be added as query parameters
+      response = await _dio.get(
+        endpoint,
+        queryParameters: params, // Dynamically pass query parameters
+        data: data,
+      );
+      return response;
+    } on DioException catch (e) {
+      errorHandle(e: e, requestMethod: "get = $endpoint");
+      devPrint("Get api error data = ${e.response}");
+      devPrint("Get api error data status code = ${e.response?.statusCode}");
+    }
+  }
+
+  Future<dynamic> post(String endpoint, [dynamic params]) async {
+    //check internet connection
+    if (!await checkInternet()) {
+      showCustomSnackBar(
+        context: Get.context!,
+        type: SnackBarType.Warning,
+        title: "No internet connection",
+        description: 'Please check your internet connection',
+      );
+      return null;
+    }
+    res.Response response;
+    try {
+      devPrint('ApiService.post: endpoint = $endpoint');
+      devPrint('ApiService.post: params = $params');
+      devPrint('ApiService.post: params type = ${params?.runtimeType}');
+
+      response = await _dio.post(endpoint, data: params);
+      devPrint("ApiService.post: statusCode = ${response.statusCode}");
+
+      return response;
+    } on DioException catch (e) {
+      errorHandle(e: e, requestMethod: "post = $endpoint");
+      devPrint("check response Repo api service e = $e");
+      devPrint(
+        "check response Repo api service status code = ${e.response?.statusCode}",
+      );
+      devPrint("check response Repo api service e.message = ${e.response?.data}");
+      // if (e.response?.statusCode == null) {
+      //  Get.offAllNamed(AppRoutes.devPrintinScreen);
+      // }
+
+      devPrint("check response Repo api service = ${e.response?.data['error']}");
+      return e.response;
+    }
+  }
+
+  Future<dynamic> patch(String endpoint, [dynamic params]) async {
+    //check internet connection
+    if (!await checkInternet()) {
+      showCustomSnackBar(
+        context: Get.context!,
+        type: SnackBarType.Warning,
+        title: "No internet connection",
+        description: 'Please check your internet connection',
+      );
+      return null;
+    }
+    res.Response response;
+    try {
+      response = await _dio.patch(endpoint, data: params);
+      return response;
+    } on DioException catch (e) {
+      errorHandle(e: e, requestMethod: "patch = $endpoint");
+      devPrint("check response Repo api service patch method  = ${e.response?.data['error']}");
+    }
+  }
+
+  Future<dynamic> put(String endpoint, Map<String, dynamic> params) async {
+    //check internet connection
+    if (!await checkInternet()) {
+      showCustomSnackBar(
+        context: Get.context!,
+        type: SnackBarType.Warning,
+        title: "No internet connection",
+        description: 'Please check your internet connection',
+      );
+      return null;
+    }
+    res.Response response;
+    try {
+      response = await _dio.put(endpoint, data: params);
+      return response;
+    } on DioException catch (e) {
+      errorHandle(e: e, requestMethod: "put = $endpoint");
+      devPrint("check response Repo api service = ${e.response?.data['error']}");
+    }
+  }
+
+  Future<dynamic> delete(String endpoint, [dynamic params]) async {
+    //check internet connection
+    if (!await checkInternet()) {
+      showCustomSnackBar(
+        context: Get.context!,
+        type: SnackBarType.Warning,
+        title: "No internet connection",
+        description: 'Please check your internet connection',
+      );
+      return null;
+    }
+    res.Response response;
+    try {
+      response = await _dio.delete(endpoint, data: params);
+      return response;
+    } on DioException catch (e) {
+      errorHandle(e: e, requestMethod: "delete= $endpoint");
+      devPrint("check response Repo api service = $e");
+      devPrint("check response Repo api service = ${e.response?.statusCode}");
+      devPrint("check response Repo api service = ${e.message}");
+      devPrint("check response Repo api service = ${e.response?.data['error']}");
+    }
+  }
+
+  Future<dynamic> multipleFileUpload(
+    String path,
+    Map<String, dynamic> body, {
+    required Map<String, File> files,
+    String replaceFileKey = '',
+  }) async {
+    //check internet connection
+    if (!await checkInternet()) {
+      showCustomSnackBar(
+        context: Get.context!,
+        type: SnackBarType.Warning,
+        title: "No internet connection",
+        description: 'Please check your internet connection',
+      );
+      return null;
+    }
+    var formData = res.FormData.fromMap(body);
+
+    for (var entry in files.entries) {
+      // Validate file path before attempting to create multipart file
+      if (entry.value.path.isEmpty) {
+        devPrint("⚠️ Skipping file with empty path: ${entry.key}");
+        continue;
+      }
+
+      // Check if file exists
+      if (!await entry.value.exists()) {
+        devPrint("⚠️ Skipping non-existent file: ${entry.value.path}");
+        continue;
+      }
+
+      try {
+        final filePath = entry.value.path;
+        final fileName = filePath.split("/").last;
+        final ext = fileName.split('.').last.toLowerCase();
+        final mimeType = switch (ext) {
+          'jpg' || 'jpeg' => 'image/jpeg',
+          'png' => 'image/png',
+          'pdf' => 'application/pdf',
+          'gif' => 'image/gif',
+          'webp' => 'image/webp',
+          _ => 'application/octet-stream',
+        };
+        formData.files.add(
+          MapEntry(
+            replaceFileKey.isEmpty ? entry.key : replaceFileKey,
+            await res.MultipartFile.fromFile(
+              filePath,
+              filename: fileName,
+              contentType: DioMediaType.parse(mimeType),
+            ),
+          ),
+        );
+      } catch (e) {
+        devPrint("❌ Error processing file ${entry.value.path}: $e");
+        continue;
+      }
+    }
+
+    try {
+      final response = await _dio.post(path, data: formData);
+      // Return the full response to match other API methods
+      return response;
+    } on DioException catch (e) {
+      errorHandle(e: e, requestMethod: "POST $path");
+      // Return the error response (if available) for upstream handling, similar to post()
+      return e.response;
+    }
+  }
+
+  /// Upload files with support for multiple files with the same key
+  /// filesMap can contain:
+  /// - File: single file with the key
+  /// - List<File>: multiple files all with the same key
+  Future<dynamic> multipleFileUploadWithList(
+    String path,
+    Map<String, dynamic> body, {
+    required Map<String, dynamic> filesMap,
+  }) async {
+    //check internet connection
+    if (!await checkInternet()) {
+      showCustomSnackBar(
+        context: Get.context!,
+        type: SnackBarType.Warning,
+        title: "No internet connection",
+        description: 'Please check your internet connection',
+      );
+      return null;
+    }
+    var formData = res.FormData.fromMap(body);
+
+    for (var entry in filesMap.entries) {
+      final key = entry.key;
+      final value = entry.value;
+
+      if (value is File) {
+        // Single file
+        if (value.path.isEmpty || !await value.exists()) {
+          devPrint("⚠️ Skipping non-existent file: ${value.path}");
+          continue;
+        }
+        try {
+          formData.files.add(
+            MapEntry(
+              key,
+              await res.MultipartFile.fromFile(
+                value.path,
+                filename: value.path.split("/").last,
+              ),
+            ),
+          );
+        } catch (e) {
+          devPrint("❌ Error processing file ${value.path}: $e");
+        }
+      } else if (value is List<File>) {
+        // Multiple files with same key
+        for (final file in value) {
+          if (file.path.isEmpty || !await file.exists()) {
+            devPrint("⚠️ Skipping non-existent file: ${file.path}");
+            continue;
+          }
+          try {
+            formData.files.add(
+              MapEntry(
+                key,
+                await res.MultipartFile.fromFile(
+                  file.path,
+                  filename: file.path.split("/").last,
+                ),
+              ),
+            );
+          } catch (e) {
+            devPrint("❌ Error processing file ${file.path}: $e");
+          }
+        }
+      }
+    }
+
+    try {
+      final response = await _dio.post(path, data: formData);
+      return response;
+    } on DioException catch (e) {
+      errorHandle(e: e, requestMethod: "POST $path");
+      return e.response;
+    }
+  }
+
+  Future<dynamic> multipleFileUploadPut(
+    String path,
+    Map<String, dynamic> body, {
+    required Map<String, File> files,
+    String replaceFileKey = '',
+  }) async {
+    //check internet connection
+    if (!await checkInternet()) {
+      showCustomSnackBar(
+        context: Get.context!,
+        type: SnackBarType.Warning,
+        title: "No internet connection",
+        description: 'Please check your internet connection',
+      );
+      return null;
+    }
+    var formData = res.FormData.fromMap(body);
+
+    for (var entry in files.entries) {
+      // Validate file path before attempting to create multipart file
+      if (entry.value.path.isEmpty) {
+        devPrint("⚠️ Skipping file with empty path: ${entry.key}");
+        continue;
+      }
+
+      // Check if file exists
+      if (!await entry.value.exists()) {
+        devPrint("⚠️ Skipping non-existent file: ${entry.value.path}");
+        continue;
+      }
+
+      try {
+        final filePath = entry.value.path;
+        final fileName = filePath.split("/").last;
+        final ext = fileName.split('.').last.toLowerCase();
+        final mimeType = switch (ext) {
+          'jpg' || 'jpeg' => 'image/jpeg',
+          'png' => 'image/png',
+          'pdf' => 'application/pdf',
+          'gif' => 'image/gif',
+          'webp' => 'image/webp',
+          _ => 'application/octet-stream',
+        };
+        formData.files.add(
+          MapEntry(
+            replaceFileKey.isEmpty ? entry.key : replaceFileKey,
+            await res.MultipartFile.fromFile(
+              filePath,
+              filename: fileName,
+              contentType: DioMediaType.parse(mimeType),
+            ),
+          ),
+        );
+      } catch (e) {
+        devPrint("❌ Error processing file ${entry.value.path}: $e");
+        continue;
+      }
+    }
+
+    try {
+      final response = await _dio.put(path, data: formData);
+      // Return the full response to match other API methods
+      return response;
+    } on DioException catch (e) {
+      errorHandle(e: e, requestMethod: "POST $path");
+      // Return the error response (if available) for upstream handling, similar to post()
+      return e.response;
+    }
+  }
+
+  Future<dynamic> multipleFileUploadPatch(
+    String path,
+    Map<String, dynamic> body, {
+    required Map<String, File> files,
+    String replaceFileKey = '',
+  }) async {
+    //check internet connection
+    if (!await checkInternet()) {
+      showCustomSnackBar(
+        context: Get.context!,
+        type: SnackBarType.Warning,
+        title: "No internet connection",
+        description: 'Please check your internet connection',
+      );
+      return null;
+    }
+    var formData = res.FormData.fromMap(body);
+
+    for (var entry in files.entries) {
+      // Validate file path before attempting to create multipart file
+      if (entry.value.path.isEmpty) {
+        devPrint("⚠️ Skipping file with empty path: ${entry.key}");
+        continue;
+      }
+
+      // Check if file exists
+      if (!await entry.value.exists()) {
+        devPrint("⚠️ Skipping non-existent file: ${entry.value.path}");
+        continue;
+      }
+
+      try {
+        final filePath = entry.value.path;
+        final fileName = filePath.split("/").last;
+        final ext = fileName.split('.').last.toLowerCase();
+        final mimeType = switch (ext) {
+          'jpg' || 'jpeg' => 'image/jpeg',
+          'png' => 'image/png',
+          'pdf' => 'application/pdf',
+          'gif' => 'image/gif',
+          'webp' => 'image/webp',
+          _ => 'application/octet-stream',
+        };
+        formData.files.add(
+          MapEntry(
+            replaceFileKey.isEmpty ? entry.key : replaceFileKey,
+            await res.MultipartFile.fromFile(
+              filePath,
+              filename: fileName,
+              contentType: DioMediaType.parse(mimeType),
+            ),
+          ),
+        );
+      } catch (e) {
+        devPrint("❌ Error processing file ${entry.value.path}: $e");
+        continue;
+      }
+    }
+
+    try {
+      final response = await _dio.patch(path, data: formData);
+      // Return the full response to match other API methods
+      return response;
+    } on DioException catch (e) {
+      errorHandle(e: e, requestMethod: "PATCH $path");
+      // Return the error response (if available) for upstream handling, similar to post()
+      return e.response;
+    }
+  }
+
+  Future<dynamic> patchMultipleFileUploadWithList(
+    String path,
+    Map<String, dynamic> body, {
+    required Map<String, dynamic> filesMap,
+  }) async {
+    //check internet connection
+    if (!await checkInternet()) {
+      showCustomSnackBar(
+        context: Get.context!,
+        type: SnackBarType.Warning,
+        title: "No internet connection",
+        description: 'Please check your internet connection',
+      );
+      return null;
+    }
+    var formData = res.FormData.fromMap(body);
+
+    for (var entry in filesMap.entries) {
+      final key = entry.key;
+      final value = entry.value;
+
+      if (value is File) {
+        // Single file
+        if (value.path.isEmpty || !await value.exists()) {
+          devPrint("⚠️ Skipping non-existent file: ${value.path}");
+          continue;
+        }
+        try {
+          formData.files.add(
+            MapEntry(
+              key,
+              await res.MultipartFile.fromFile(
+                value.path,
+                filename: value.path.split("/").last,
+              ),
+            ),
+          );
+        } catch (e) {
+          devPrint("❌ Error processing file ${value.path}: $e");
+        }
+      } else if (value is List<File>) {
+        // Multiple files with same key
+        for (final file in value) {
+          if (file.path.isEmpty || !await file.exists()) {
+            devPrint("⚠️ Skipping non-existent file: ${file.path}");
+            continue;
+          }
+          try {
+            formData.files.add(
+              MapEntry(
+                key,
+                await res.MultipartFile.fromFile(
+                  file.path,
+                  filename: file.path.split("/").last,
+                ),
+              ),
+            );
+          } catch (e) {
+            devPrint("❌ Error processing file ${file.path}: $e");
+          }
+        }
+      }
+    }
+
+    try {
+      final response = await _dio.patch(path, data: formData);
+      return response;
+    } on DioException catch (e) {
+      errorHandle(e: e, requestMethod: "PATCH $path");
+      return e.response;
+    }
+  }
+
+
+}
+
+errorHandle({
+  required DioException e,
+  required String requestMethod,
+  BuildContext? context,
+}) async {
+  devPrint(" Api Request Method: $requestMethod");
+  devPrint(" Api Request Method: ${e.type}");
+
+  switch (e.type) {
+    case DioExceptionType.connectionTimeout:
+      devPrint("DioErrorType.connectTimeout");
+      break;
+    case DioExceptionType.sendTimeout:
+      devPrint("DioErrorType.sendTimeout");
+      break;
+    case DioExceptionType.receiveTimeout:
+      devPrint("DioErrorType.receiveTimeout");
+      break;
+    case DioExceptionType.cancel:
+      devPrint("DioErrorType.cancel");
+      break;
+    case DioExceptionType.connectionError:
+      devPrint("DioErrorType.connectionError");
+      break;
+    case DioExceptionType.unknown:
+      devPrint("DioErrorType.other");
+      break;
+    case DioExceptionType.badCertificate:
+      devPrint("DioErrorType.badCertificate");
+      // TODO: Handle this case.
+      break;
+    case DioExceptionType.badResponse:
+      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+        // Remove all local data when session is expired
+        // await CacheManager.removeAllLocalData();
+        // await _showAuthErrorDiadevPrint(
+        //   statusCode: e.response?.statusCode ?? 401,
+        //   context: context ?? Get.context,
+        // );
+        devPrint("Token invalid, navigating to sign-in screen.");
+        // if (context != null) {
+        //   showCustomSnackBar(
+        //     context: context,
+        //     type: SnackBarType.Warning,
+        //     title: "Warning",
+        //     description: "You have devPrintged out, Token invalid.",
+        //   );
+        // }
+        // Navigate to the sign-in screen
+        //Get.offAllNamed(AppRoutes.LandingScreen);
+      }
+
+      // devPrint the response message
+      // devPrint("DioErrorType.badResponse ${e.response?.data['message']['phone'][0]}");
+      // devPrint("DioErrorType.badResponse ${e.response?.data['message'] ?? "timeout"}");
+      break;
+  }
+}
+
+
+Future<bool> checkInternet() async {
+  final result = await Connectivity().checkConnectivity();
+
+  // Not connected to any network at all
+  if (result == ConnectivityResult.none) {
+    return false;
+  }
+
+  // Optional: Verify real internet access with a ping request
+  try {
+    final lookup = await InternetAddress.lookup('google.com');
+    if (lookup.isNotEmpty && lookup.first.rawAddress.isNotEmpty) {
+      return true;
+    }
+  } catch (_) {
+    return false;
+  }
+
+  return false;
+}
+
+// Helper function to show authentication error diadevPrint
+Future<void> _showAuthErrorDiadevPrint({
+  required int statusCode,
+  BuildContext? context,
+}) async {
+  if (context == null) return;
+
+  String title = "";
+  String message = "";
+
+  if (statusCode == 401) {
+    title = "Session Expired";
+    message = "Your session has expired. Please devPrint in again to continue.";
+  } else if (statusCode == 403) {
+    title = "Access Denied";
+    message =
+        "You don't have permission to access this resource. Please devPrint in again.";
+  }
+
+  await customSuccessDiadevPrint(
+    imagePath: ImageUtils.ErrorIcon,
+    context,
+    title: title,
+    message: message,
+    buttonText: "Go to devPrintin",
+    onPressed: () async {
+      // Clear all cached data
+      await CacheManager.removeToken();
+      await CacheManager.removeUserData();
+
+      // Close diadevPrint and navigate to sign in
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close diadevPrint
+      }
+      //AppRouter.router.go(AppRoutes.SigninScreen);
+      Get.offAndToNamed(AppRoutes.SigninScreen);
+
+    },
+  );
+}
+
+String formatValidationMessages(Map<String, dynamic> messages) {
+  StringBuffer formattedMessages = StringBuffer();
+
+  messages.forEach((key, value) {
+    if (value is String) {
+      formattedMessages.writeln(value);
+    } else if (value is List) {
+      for (var message in value) {
+        formattedMessages.writeln(message);
+      }
+    }
+  });
+
+  return formattedMessages.toString();
+}
+
+SnackbarController showErrorSnackbar({required String message}) {
+  return Get.showSnackbar(
+    GetSnackBar(
+      title: 'Error',
+      message: message,
+      icon: Icon(Icons.error, color: CustomColors.white()),
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: CustomColors.primary(),
+
+      borderRadius: 20,
+      margin: const EdgeInsets.all(10),
+      duration: const Duration(seconds: 3),
+      isDismissible: true,
+      dismissDirection: DismissDirection.horizontal,
+      forwardAnimationCurve: Curves.easeOutBack,
+      reverseAnimationCurve: Curves.slowMiddle,
+    ),
+  );
+}
