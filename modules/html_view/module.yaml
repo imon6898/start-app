@@ -1,0 +1,42 @@
+name: html_view
+description: >
+  AppHtmlView - renders HTML strings as Flutter widgets with theme-aware
+  colors, tappable tel/mailto/sms/web links, WhatsApp-style markdown parsing,
+  auto-linkify, Scripture/USFM styling, and HTML-to-plain-text utilities.
+
+files:
+  - source: lib/app_html_view.dart
+    target: lib/app/widgets/app_html_view.dart
+
+dependencies:
+  flutter_html: ^3.0.0
+  html_unescape: ^2.0.0
+  google_fonts: ^8.2.1
+  url_launcher: ^6.3.2
+
+core_dependencies:
+  - lib/app/themes/theme_controller.dart
+
+platform_config: >
+  No API keys. url_launcher requires intent/scheme declarations so
+  canLaunchUrl returns true:
+  Android - add a <queries> block as a direct child of <manifest> in
+  android/app/src/main/AndroidManifest.xml declaring VIEW/https, DIAL/tel and
+  SENDTO/mailto and sms intents.
+  iOS - add LSApplicationQueriesSchemes to ios/Runner/Info.plist with https,
+  http, tel, mailto, sms.
+  google_fonts fetches fonts over the network at runtime; bundle them under
+  assets/google_fonts/ if you need offline support.
+
+optional_integration: >
+  Web links open in the external browser by default. Set
+  AppHtmlView.webViewOpener = CustomWebView.open at startup (webview module)
+  to open them in an in-app WebView instead.
+
+notes: >
+  Recovered from lib/app/widgets/AppHtmlView.dart (1133 lines) and renamed to
+  lower_snake_case. Public API preserved. Repackaging removed the hard
+  CustomWebView import (replaced by the webViewOpener hook), collapsed the two
+  duplicated ~200-line Scripture style maps into one private builder, unified
+  four copy-pasted onLinkTap bodies, and hoisted the linkify regexes to static
+  finals.

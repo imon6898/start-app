@@ -1,0 +1,97 @@
+name: multi_step_onboarding
+description: >
+  Rider and merchant registration wizards kept as a pattern reference for
+  multi-step forms: PageView step state machine, per-step Form validation,
+  multipart file upload, cascading location dropdowns and a Repo/Impl API split.
+  The business fields are delivery/logistics domain code — copy the structure,
+  replace the fields.
+
+kind: reference
+strip_reason: delivery-domain business logic, not generic starter material
+
+files:
+  - lib/app/feature/auth/auth_controllers/rider_signup_controller.dart
+  - lib/app/feature/auth/auth_controllers/merchant_signup_controller.dart
+  - lib/app/feature/auth/auth_logic/rider_api_service.dart
+  - lib/app/feature/auth/auth_logic/merchant_api_service.dart
+  - lib/app/feature/auth/auth_logic/location_api_service.dart
+  - lib/app/feature/auth/auth_logic/onboarding_api_const.dart
+  - lib/app/feature/auth/auth_presentation/rider_signup_screen.dart
+  - lib/app/feature/auth/auth_presentation/merchant_signup_screen.dart
+  - lib/app/feature/auth/auth_presentation/rider_registration_info_screen.dart
+  - lib/app/feature/auth/auth_presentation/merchant_registration_info_screen.dart
+  - lib/app/utils/onboarding_validators.dart
+  - lib/app/services/local_data/pending_login_cache.dart
+
+dependencies:
+  image_picker: ^1.2.0
+  file_picker: ^13.0.0
+  pinput: ^5.0.1
+  intl: ^0.20.2
+  permission_handler: ^13.0.2
+  lucide_icons_flutter: ^3.1.19
+  flutter_svg: ^2.3.0
+  shared_preferences: ^2.5.5
+
+optional_dependencies:
+  google_maps_flutter: ^2.18.0
+
+requires_core:
+  - lib/app/services/domain/api_service.dart
+  - lib/app/services/local_data/cache_manager.dart
+  - lib/app/utils/validator.dart
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/constants/app_assets.dart
+  - lib/app/widgets/appbar_widgets/appbar_widget.dart
+  - lib/app/widgets/custom_text_field.dart
+  - lib/app/widgets/custom_phone_text_field.dart
+  - lib/app/widgets/custom_primary_button.dart
+  - lib/app/widgets/custom_snack_bar.dart
+  - lib/app/widgets/file_upload_widget.dart
+
+requires_modules:
+  - name: custom_dropdown_button
+    reason: both signup screens use CustomDropdownButton for parish/city/zone and bank pickers
+    required: true
+  - name: location_picker
+    reason: merchant_signup_screen step 3 embeds ProfileLocationPicker (Google Maps); merchant_signup_controller uses LatLng
+    required: false
+
+routes:
+  - name: RiderRegistrationInfoScreen
+    path: /riderRegistrationInfoScreen
+  - name: RiderSignupScreen
+    path: /riderSignupScreen
+  - name: MerchantRegistrationInfoScreen
+    path: /merchantRegistrationInfoScreen
+  - name: MerchantSignupScreen
+    path: /merchantSignupScreen
+
+bindings:
+  - RiderSignupController
+  - MerchantSignupController
+
+platform_config: |
+  Android (android/app/src/main/AndroidManifest.xml), inside <manifest>:
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"/>
+    minSdk 21+ in android/app/build.gradle.kts (image_picker + file_picker).
+
+  iOS (ios/Runner/Info.plist):
+    <key>NSCameraUsageDescription</key>
+    <string>Used to take your profile photo and document photos.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Used to attach identity and address documents.</string>
+
+  Backend: OnboardingEndpoints in
+  lib/app/feature/auth/auth_logic/onboarding_api_const.dart holds placeholder
+  paths. Repoint them at your API. All services call
+  ApiService(logisticsBaseUrl: true), which reads LOGISTICS_BASE_URL from .env.
+
+  Only if the optional location_picker module is installed: Google Maps API key
+  in AndroidManifest (com.google.android.geo.API_KEY), AppDelegate.swift
+  (GMSServices.provideAPIKey), and GOOGLE_MAPS_API_KEY_ALL_IN_ONE in .env.

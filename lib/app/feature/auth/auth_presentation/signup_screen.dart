@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:flutter_starter/app/core/enums/enums.dart';
 import 'package:flutter_starter/app/feature/auth/auth_controllers/signup_controller.dart';
-import 'package:flutter_starter/app/routes/app_routes.dart';
-import 'package:flutter_starter/app/utils/constants/app_assets.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_starter/app/utils/constants/app_colors.dart';
 import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
 import 'package:flutter_starter/app/utils/platform_utils.dart';
 import 'package:flutter_starter/app/utils/responsive_utils.dart';
 import 'package:flutter_starter/app/utils/validator.dart';
 import 'package:flutter_starter/app/widgets/appbar_widgets/appbar_widget.dart';
-import 'package:flutter_starter/app/widgets/custom_image.dart';
 import 'package:flutter_starter/app/widgets/custom_phone_text_field.dart';
 import 'package:flutter_starter/app/widgets/custom_primary_button.dart';
 import 'package:flutter_starter/app/widgets/custom_snack_bar.dart';
 import 'package:flutter_starter/app/widgets/custom_text_field.dart';
-import 'package:flutter_starter/app/widgets/profile_location_picker.dart';
 
 class SignupScreen extends StatelessWidget {
   const SignupScreen({super.key});
@@ -38,10 +34,7 @@ class SignupScreen extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: R.w(16)),
       child: Obx(
         () => SingleChildScrollView(
-          physics:
-              controller.isMapInteracting.value
-                  ? const NeverScrollableScrollPhysics()
-                  : const BouncingScrollPhysics(),
+          physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
               SizedBox(height: R.h(16)),
@@ -129,21 +122,6 @@ class SignupScreen extends StatelessWidget {
                 CountryData.getDefaultCountry(),
           ),
 
-          // ProfileLocationPicker(
-          //   addressController: controller.addressRegCtr,
-          //   selectedLocation: controller.selectedLocation,
-          //   isMapInteracting: controller.isMapInteracting,
-          //   subTitle: "Please select a location",
-          //   title: 'Address',
-          //   hintText: 'Search for a location',
-          //   //required: true,
-          //   onAddressChanged: (address) {
-          //     controller.addressRegCtr.text = address;
-          //   },
-          //   onLocationChanged: (latLng) {
-          //     controller.selectedLocation.value = latLng;
-          //   },
-          // ),
           SizedBox(height: R.h(4)),
 
           CustomTextField(
@@ -341,12 +319,11 @@ class SignupScreen extends StatelessWidget {
               FocusScope.of(context).unfocus();
               controller.signInWithGoogle();
             },
-            icon: CustomImage(
-              image: ImageUtils.GoogleIcon,
-              width: R.h(20),
-              height: R.h(20),
-              imageType: ImageType.asset,
-              isSvg: true,
+            // Placeholder glyph — drop in the official brand asset here.
+            icon: Icon(
+              LucideIcons.globe,
+              size: R.h(20),
+              color: CustomColors.black(),
             ),
           ),
         ),
@@ -377,12 +354,11 @@ class SignupScreen extends StatelessWidget {
               FocusScope.of(context).unfocus();
               controller.signInWithApple();
             },
-            icon: CustomImage(
-              image: ImageUtils.AppleIcon,
-              width: R.w(20),
-              height: R.w(20),
-              imageType: ImageType.asset,
-              isSvg: true,
+            // Placeholder glyph — drop in the official brand asset here.
+            icon: Icon(
+              LucideIcons.apple,
+              size: R.w(20),
+              color: CustomColors.black(),
             ),
           ),
         ),

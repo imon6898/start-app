@@ -1,26 +1,20 @@
 import "../platform_utils.dart";
 
+/// Bundled asset paths. Every entry here must also be listed under `assets:`
+/// in pubspec.yaml.
 class ImageUtils {
   const ImageUtils._();
 
-  // ── App identity ──────────────────────────────────────────────────────
+  /// Shown on the splash screen — swap in your own mark.
+  static const String appLogo = "assets/images/app_logo.svg";
 
-  static const String appIcon = "assets/icon/app_icon.png";
+  static const String backIos = "assets/icons/back_ios.svg";
+  static const String backAndroid = "assets/icons/back_android.svg";
 
-  /// Neutral placeholder for a product/hero image that failed to load or was
-  /// never supplied. Aliases [appIcon] — one bundled mark serves both roles
-  /// rather than shipping a second near-identical PNG.
-  static const String imagePlaceholder = appIcon;
+  /// Back affordance matching the host platform's convention.
+  static String get platformBackIcon =>
+      PlatformUtils.isIOS ? backIos : backAndroid;
 
-  // ── Typography ────────────────────────────────────────────────────────
-  /// The bundled font family. Declared here so `CustomTextStyles` and any
-  /// ad-hoc `TextStyle` name it from one place.
+  /// The bundled font family, named here so styles resolve it from one place.
   static const String interFontFamily = "Inter";
-
-  // ── Platform-specific ─────────────────────────────────────────────────
-  /// Kept for parity with the merchant app's platform-aware asset lookups. The
-  /// shopper app draws its back affordance from the Phosphor icon font rather
-  /// than an SVG pair, so this reports the platform rather than a file — use it
-  /// to pick the right *glyph*.
-  static bool get usesIosBackChevron => PlatformUtils.isIOS;
 }

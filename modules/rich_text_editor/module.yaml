@@ -1,0 +1,29 @@
+name: rich_text_editor
+description: >
+  Themed rich-text (WYSIWYG) form field built on flutter_quill, with an
+  optional heading, a fully configurable toolbar and a bordered editor box.
+
+files:
+  - source: lib/custom_quil_text_field.dart
+    target: lib/app/widgets/custom_quil_text_field.dart
+
+dependencies:
+  flutter_quill: ^11.5.1
+
+core_dependencies:
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/responsive_utils.dart
+
+platform_config: >
+  None required. flutter_quill needs no permissions, API keys or native setup
+  for the editor + simple toolbar used here.
+  Optional: add FlutterQuillLocalizations.delegate to
+  MaterialApp.localizationsDelegates if you enable showLink and want the link
+  dialog localized.
+
+notes: >
+  The recovered file also held two dead stubs, CustomHtmlTextField and
+  CustomHtmlTextFieldSimple, whose build() returned SizedBox.shrink(). Both
+  were dropped - they had no callers. For HTML rendering use the html_view
+  module.

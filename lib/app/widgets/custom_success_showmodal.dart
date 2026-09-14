@@ -1,16 +1,18 @@
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import 'package:flutter_starter/app/core/enums/enums.dart';
-import 'package:flutter_starter/app/utils/constants/app_assets.dart';
 import 'package:flutter_starter/app/utils/constants/app_colors.dart';
 import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
 import 'package:flutter_starter/app/utils/responsive_utils.dart';
 import 'package:flutter_starter/app/widgets/custom_image.dart';
-import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 
 Future<void> customSuccessDialog(
   BuildContext context, {
   String? imagePath,
-      bool? isSvg = false,
+  bool? isSvg = false,
+  IconData? icon,
+  Color? iconColor,
   String? title,
   String? message,
   Widget? widget,
@@ -35,13 +37,21 @@ Future<void> customSuccessDialog(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(height: R.h(10)), // spacing below close icon
-                  CustomImage(
-                    image: imagePath ?? ImageUtils.SuccessIcon,
-                    width: R.w(80),
-                    height: R.w(80),
-                    imageType: ImageType.asset,
-                    isSvg: isSvg ?? false,
-                  ),
+                  // Pass imagePath for artwork, or icon to override the glyph.
+                  if (imagePath != null && imagePath.isNotEmpty)
+                    CustomImage(
+                      image: imagePath,
+                      width: R.w(80),
+                      height: R.w(80),
+                      imageType: ImageType.asset,
+                      isSvg: isSvg ?? false,
+                    )
+                  else
+                    Icon(
+                      icon ?? LucideIcons.circleCheck,
+                      size: R.w(64),
+                      color: iconColor ?? CustomColors.success(),
+                    ),
                   SizedBox(height: R.h(20)),
                   Text(
                     title ?? "",

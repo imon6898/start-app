@@ -174,9 +174,6 @@ class VerifyOtpController extends GetxController {
       final token = loginData.accessToken!;
       final user = loginData.user;
       final roles = loginData.roles;
-      final riderId = loginData.riderId ??
-          ((roles != null && roles.contains('rider')) ? user?.id : null);
-      final hubId = loginData.hubId;
 
       // Save all auth data to cache (same as signin controller)
       await Future.wait([
@@ -186,8 +183,6 @@ class VerifyOtpController extends GetxController {
         if (user != null)
           CacheManager.setUserData(jsonEncode(user.toJson())),
         CacheManager.removeIsGuest(),
-        if (riderId != null) CacheManager.setRiderId(riderId),
-        if (hubId != null) CacheManager.setHubId(hubId),
         if (roles != null && roles.isNotEmpty)
           CacheManager.setRoles(jsonEncode(roles)),
       ]);

@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 
-enum AccountRole {user, rider, merchant }
+/// Example account types. Rename/extend for your app.
+enum AccountRole { personal, business }
 
 class CreateAccountController extends GetxController {
   final Rx<AccountRole?> selectedRole = Rx<AccountRole?>(null);

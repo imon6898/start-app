@@ -1,0 +1,42 @@
+name: webview
+description: >-
+  In-app browser screen built on flutter_inappwebview - progress bar, page title
+  and host in the app bar, back/forward/refresh/home bottom bar, share, open in
+  external browser, copy link, and tel:/mailto:/sms:/store-link handoff.
+
+files:
+  - lib/app/widgets/custom_webview.dart
+
+dependencies:
+  flutter_inappwebview: "^6.1.5"
+  share_plus: "^13.3.0"
+  url_launcher: "^6.3.2"
+
+platform_config:
+  android: |
+    minSdk 21 or higher - set in android/app/build.gradle.kts:
+      defaultConfig { minSdk = 21 }
+    (flutter.minSdkVersion already resolves to 21+, so usually nothing to change.)
+    compileSdk 34 or higher.
+    INTERNET permission in android/app/src/main/AndroidManifest.xml:
+      <uses-permission android:name="android.permission.INTERNET"/>
+    Plain-HTTP pages on Android 9+ need cleartext enabled on <application>:
+      android:usesCleartextTraffic="true"
+    url_launcher needs a <queries> block in AndroidManifest.xml for tel:/mailto:/sms:
+    and for opening the external browser - see the README.
+  ios: |
+    Minimum deployment target iOS 12 (template is on 13.0) - ios/Podfile:
+      platform :ios, '13.0'
+    Plain-HTTP pages need an ATS exception in ios/Runner/Info.plist:
+      <key>NSAppTransportSecurity</key>
+      <dict><key>NSAllowsArbitraryLoads</key><true/></dict>
+    url_launcher needs LSApplicationQueriesSchemes (tel, mailto, sms, https) in Info.plist.
+    No AppDelegate changes are required for flutter_inappwebview 6.x.
+  notes: |
+    No API keys. flutter_inappwebview 6.x registers itself; no manual plugin
+    registration in MainActivity or AppDelegate.
+
+core_dependencies:
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/widgets/appbar_widgets/appbar_widget.dart

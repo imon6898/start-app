@@ -34,8 +34,9 @@ class SplashScreen extends StatelessWidget {
 
                     alignment: Alignment.center,
                     child: CustomImage(
-                      image: ImageUtils.yaadLogoHori,
+                      image: ImageUtils.appLogo,
                       imageType: ImageType.asset,
+                      isSvg: true,
                       fit: BoxFit.fitWidth,
                     ),
                   ),

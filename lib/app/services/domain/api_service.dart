@@ -9,10 +9,8 @@ import 'package:get/get.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../routes/app_routes.dart';
-import '../../utils/constants/app_assets.dart';
 import '../../utils/constants/app_colors.dart';
 import '../../widgets/custom_snack_bar.dart';
-import '../../widgets/custom_success_showmodal.dart';
 import '../local_data/cache_manager.dart';
 import 'api_const.dart';
 import 'dev_tools.dart';
@@ -761,29 +759,9 @@ errorHandle({
       // TODO: Handle this case.
       break;
     case DioExceptionType.badResponse:
-      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
-        // Remove all local data when session is expired
-        // await CacheManager.removeAllLocalData();
-        // await _showAuthErrorDialog(
-        //   statusCode: e.response?.statusCode ?? 401,
-        //   context: context ?? Get.context,
-        // );
-        devPrint("Token invalid, navigating to sign-in screen.");
-        // if (context != null) {
-        //   showCustomSnackBar(
-        //     context: context,
-        //     type: SnackBarType.Warning,
-        //     title: "Warning",
-        //     description: "You have logged out, Token invalid.",
-        //   );
-        // }
-        // Navigate to the sign-in screen
-        //Get.offAllNamed(AppRoutes.LandingScreen);
-      }
-
-      // log the response message
-      // devPrint("DioErrorType.badResponse ${e.response?.data['message']['phone'][0]}");
-      // devPrint("DioErrorType.badResponse ${e.response?.data['message'] ?? "timeout"}");
+      // 401/403 is already handled by the refresh interceptor, which signs the
+      // user out via _handleSessionExpired once a refresh fails.
+      devPrint("DioErrorType.badResponse ${e.response?.statusCode}");
       break;
     default:
       // covers future DioExceptionType values (e.g. transformTimeout)
@@ -812,47 +790,6 @@ Future<bool> checkInternet() async {
   }
 
   return false;
-}
-
-// Helper function to show authentication error dialog
-Future<void> _showAuthErrorDialog({
-  required int statusCode,
-  BuildContext? context,
-}) async {
-  if (context == null) return;
-
-  String title = "";
-  String message = "";
-
-  if (statusCode == 401) {
-    title = "Session Expired";
-    message = "Your session has expired. Please log in again to continue.";
-  } else if (statusCode == 403) {
-    title = "Access Denied";
-    message =
-        "You don't have permission to access this resource. Please log in again.";
-  }
-
-  await customSuccessDialog(
-    imagePath: ImageUtils.ErrorIcon,
-    context,
-    title: title,
-    message: message,
-    buttonText: "Go to Login",
-    onPressed: () async {
-      // Clear all cached data
-      await CacheManager.removeToken();
-      await CacheManager.removeUserData();
-
-      // Close dialog and navigate to sign in
-      if (context.mounted) {
-        Navigator.of(context).pop(); // Close dialog
-      }
-      //AppRouter.router.go(AppRoutes.SigninScreen);
-      Get.offAndToNamed(AppRoutes.SigninScreen);
-
-    },
-  );
 }
 
 String formatValidationMessages(Map<String, dynamic> messages) {

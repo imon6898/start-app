@@ -1,6 +1,5 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:flutter_starter/app/feature/auth/auth_controllers/create_account_controller.dart';
 import 'package:flutter_starter/app/routes/app_routes.dart';
@@ -49,35 +48,20 @@ class CreateAccountScreen extends StatelessWidget {
         children: [
           _buildRoleCard(
             controller: controller,
-            role: AccountRole.user,
-            svgAsset: 'assets/images/registration/user_illustration.svg',
-            title: "I'm a User".tr,
-            subtitle:
-            "Register as an individual user to create\npickup orders, track deliveries, and manage your shipping costs."
-                .tr,
-            isSelected: selected == AccountRole.user,
+            role: AccountRole.personal,
+            icon: Icons.person_outline,
+            title: "Personal account".tr,
+            subtitle: "For individuals using the app on their own.".tr,
+            isSelected: selected == AccountRole.personal,
           ),
           SizedBox(height: R.h(12)),
           _buildRoleCard(
             controller: controller,
-            role: AccountRole.merchant,
-            svgAsset: 'assets/images/registration/merchant_illustration.svg',
-            title: "I'm a Merchant".tr,
-            subtitle:
-                "Register as a merchant to ship your\nproducts across Jamaica with competitive rates and a dedicated portal."
-                    .tr,
-            isSelected: selected == AccountRole.merchant,
-          ),
-          SizedBox(height: R.h(12)),
-          _buildRoleCard(
-            controller: controller,
-            role: AccountRole.rider,
-            svgAsset: 'assets/images/registration/rider_illustration.svg',
-            title: "I'm a Rider".tr,
-            subtitle:
-                "Join our growing delivery fleet with\nflexible hours, competitive earnings, and weekly payouts."
-                    .tr,
-            isSelected: selected == AccountRole.rider,
+            role: AccountRole.business,
+            icon: Icons.storefront_outlined,
+            title: "Business account".tr,
+            subtitle: "For teams and organizations.".tr,
+            isSelected: selected == AccountRole.business,
           ),
         ],
       );
@@ -87,7 +71,7 @@ class CreateAccountScreen extends StatelessWidget {
   Widget _buildRoleCard({
     required CreateAccountController controller,
     required AccountRole role,
-    required String svgAsset,
+    required IconData icon,
     required String title,
     required String subtitle,
     required bool isSelected,
@@ -112,21 +96,12 @@ class CreateAccountScreen extends StatelessWidget {
                     blurRadius: 3,
                     offset: const Offset(0, 1),
                   ),
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 2,
-                    offset: const Offset(0, -1),
-                  ),
                 ]
               : [],
         ),
         child: Column(
           children: [
-            SvgPicture.asset(
-              svgAsset,
-              width: R.w(174),
-              height: R.h(110),
-            ),
+            Icon(icon, size: R.sp(40), color: CustomColors.primary()),
             SizedBox(height: R.h(14)),
             Text(
               title,
@@ -139,7 +114,7 @@ class CreateAccountScreen extends StatelessWidget {
             Text(
               subtitle,
               style: CustomTextStyles.regular14.copyWith(
-                color: const Color(0xFF8E8E8E),
+                color: CustomColors.textGray(),
                 height: 1.4,
               ),
               textAlign: TextAlign.center,
@@ -214,16 +189,7 @@ class CreateAccountScreen extends StatelessWidget {
               color: CustomColors.white(),
             ),
             onPressed: isEnabled
-                ? () {
-              if (controller.selectedRole.value == AccountRole.user) {
-                Get.toNamed(AppRoutes.UserRegistrationInfoScreen);
-              }
-              else if (controller.selectedRole.value == AccountRole.merchant) {
-                Get.toNamed(AppRoutes.MerchantRegistrationInfoScreen);
-              } else {
-                Get.toNamed(AppRoutes.RiderRegistrationInfoScreen);
-              }
-            }
+                ? () => Get.toNamed(AppRoutes.UserRegistrationInfoScreen)
                 : null,
           ),
         ),

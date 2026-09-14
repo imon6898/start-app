@@ -1,18 +1,7 @@
-///How to use
+/// Theme-aware colour tokens. Every token is a method so it can re-read the
+/// active [ThemeController] on each build.
+///   Container(color: CustomColors.primary())
 library;
-
-/*
-import 'package:your_project/utils/custom_colors.dart';
-
-Container(
-  color: CustomColors.mainColor,
-  child: Text(
-    'Hello World',
-    style: TextStyle(color: CustomColors.white),
-  ),
-);
-
-*/
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -52,11 +41,25 @@ class CustomColors {
     return const Color(0xFFD82424);
   }
 
+  static Color warning() {
+    return const Color(0xFFE79829);
+  }
+
   // === TEXT COLORS ===
   static Color textPrimary() {
     return _isDarkMode
         ? CustomColors.white()
         : const Color(0xFF006466);
+  }
+
+  /// Text drawn on top of [primary]/[secondary] fills.
+  static Color onAccent() {
+    return const Color(0xFFFFFFFF);
+  }
+
+  /// Text on a dark surface — stays light in both themes.
+  static Color textInverse() {
+    return const Color(0xFFFAFAFA);
   }
 
   static Color paragraph() {

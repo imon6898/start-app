@@ -7,7 +7,6 @@ import 'package:flutter_starter/app/core/di/user_di.dart';
 import 'package:flutter_starter/app/core/models/base_response.dart';
 import 'package:flutter_starter/app/feature/auth/auth_logic/auth_api_service.dart';
 import 'package:flutter_starter/app/feature/auth/auth_models/auth_response.dart';
-import 'package:flutter_starter/app/feature/dashboard/dashboard_controllers/dashboard_controller.dart';
 import 'package:flutter_starter/app/routes/app_routes.dart';
 import 'package:flutter_starter/app/services/local_data/cache_manager.dart';
 import 'package:flutter_starter/app/widgets/custom_snack_bar.dart';
@@ -126,22 +125,14 @@ class SigninController extends GetxController {
               }
             }
           } else {
-            // Save token, refresh token, user data, and rider/hub info
+            // Persist the session
             final refreshToken = baseResponse.data!.refreshToken;
             final roles = baseResponse.data!.roles;
-            // Use explicit riderId from response, or fall back to user.id for rider role
-            final riderId = baseResponse.data!.riderId ??
-                ((roles != null && roles.contains('rider')) ? user?.id : null);
-            final hubId = baseResponse.data!.hubId;
-            final merchantId = baseResponse.data!.merchantId;
             await Future.wait([
               CacheManager.setToken(token!),
               if (refreshToken != null) CacheManager.setRefreshToken(refreshToken),
               CacheManager.setUserData(jsonEncode(user?.toJson())),
               CacheManager.removeIsGuest(), // Clear guest mode on login
-              if (riderId != null) CacheManager.setRiderId(riderId),
-              if (hubId != null) CacheManager.setHubId(hubId),
-              if (merchantId != null) CacheManager.setMerchantId(merchantId),
               if (roles != null && roles.isNotEmpty) CacheManager.setRoles(jsonEncode(roles)),
             ]);
 
@@ -159,11 +150,6 @@ class SigninController extends GetxController {
               // Clear saved credentials if remember me is unchecked
               await CacheManager.removeLoginEmail();
               await CacheManager.removeLoginPassword();
-            }
-
-            // Delete controllers that cache user role/data so they recreate fresh
-            if (Get.isRegistered<DashboardController>()) {
-              Get.delete<DashboardController>(force: true);
             }
 
             // User is verified, go to dashboard

@@ -31,12 +31,12 @@ class FileUploadWidget extends StatelessWidget {
 
   Future<void> _pickFile() async {
     final extensions = allowedExtensions.split(',').map((e) => e.trim()).toList();
-    final result = await FilePicker.platform.pickFiles(
+    final picked = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: extensions,
     );
-    if (result != null && result.files.single.path != null) {
-      onFilePicked(File(result.files.single.path!));
+    if (picked?.path != null) {
+      onFilePicked(File(picked!.path!));
     }
   }
 
@@ -81,11 +81,12 @@ class FileUploadWidget extends StatelessWidget {
 
   Widget _buildUploadArea() {
     return DottedBorder(
-      borderType: BorderType.RRect,
-      radius: Radius.circular(R.r(8)),
-      color: CustomColors.whiteStroke(),
-      strokeWidth: 1.5,
-      dashPattern: const [6, 4],
+      options: RoundedRectDottedBorderOptions(
+        radius: Radius.circular(R.r(8)),
+        color: CustomColors.whiteStroke(),
+        strokeWidth: 1.5,
+        dashPattern: const [6, 4],
+      ),
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.symmetric(vertical: R.h(20)),

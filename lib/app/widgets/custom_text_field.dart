@@ -170,7 +170,7 @@ class _CustomTextFormFiledState extends State<CustomTextField> {
         ],
         ConstrainedBox(
           constraints: BoxConstraints(
-            minHeight: (widget.maxLines ?? 1) > 1 ? 0 : R.h(42), // Match CustomDropdownButton height for single line
+            minHeight: (widget.maxLines ?? 1) > 1 ? 0 : R.h(42),
           ),
           child: TextFormField(
           textAlignVertical: TextAlignVertical.center,

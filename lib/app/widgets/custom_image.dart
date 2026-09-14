@@ -1,13 +1,12 @@
 import 'dart:io';
-import 'package:flutter_starter/app/core/enums/enums.dart';
-import 'package:flutter_starter/app/services/domain/api_const.dart';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_starter/app/utils/constants/app_assets.dart';
-import 'package:flutter_starter/app/services/domain/api_const.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../core/enums/enums.dart';
+import '../services/domain/api_const.dart';
 import '../utils/constants/app_colors.dart';
 
 class CustomImage extends StatelessWidget {
@@ -47,7 +46,7 @@ class CustomImage extends StatelessWidget {
     this.borderRadius,
     this.customBorderRadius,
     this.fit = BoxFit.fill,
-    this.placeholder = ImageUtils.AppPlaceHolder,
+    this.placeholder,
     this.isSvgPlaceholder = false,
     this.imageType = ImageType.network,
     this.circular = false,
@@ -255,31 +254,35 @@ class CustomImage extends StatelessWidget {
     }
   }
 
+  /// Falls back to [placeholder] if an asset was supplied, otherwise draws an
+  /// icon — so the template ships without a bundled placeholder image.
   Widget _buildPlaceholder() {
-    if (placeholderIcon != null) {
-      return Container(
-        height: height,
-        width: width,
-        color: bgColor ?? CustomColors.gray(),
-        child: Center(
-          child: Icon(
-            placeholderIcon,
-            size: placeholderIconSize ?? (height != null ? height! * 0.5 : 40),
-            color: placeholderIconColor ?? CustomColors.textGrayDark(),
-          ),
-        ),
-      );
+    if (placeholder != null && placeholder!.isNotEmpty) {
+      return isSvgPlaceholder
+          ? SvgPicture.asset(
+              placeholder!,
+              height: height,
+              width: width,
+              fit: BoxFit.cover,
+            )
+          : Image.asset(
+              placeholder!,
+              height: height,
+              width: width,
+              fit: BoxFit.cover,
+            );
     }
-    return isSvgPlaceholder ? SvgPicture.asset(
-      placeholder ?? ImageUtils.AppPlaceHolder,
+    return Container(
       height: height,
       width: width,
-      fit: BoxFit.cover,
-    ): Image.asset(
-      placeholder ?? ImageUtils.AppPlaceHolder,
-      height: height,
-      width: width,
-      fit: BoxFit.cover,
+      color: bgColor ?? CustomColors.gray(),
+      child: Center(
+        child: Icon(
+          placeholderIcon ?? LucideIcons.imageOff,
+          size: placeholderIconSize ?? (height != null ? height! * 0.5 : 40),
+          color: placeholderIconColor ?? CustomColors.textGrayDark(),
+        ),
+      ),
     );
   }
 

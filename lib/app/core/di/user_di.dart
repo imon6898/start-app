@@ -27,24 +27,10 @@ class UserDi extends GetxController {
       CacheManager.token != null &&
       CacheManager.token!.isNotEmpty;
 
-  /// Role-specific getters
-  String? get riderId => CacheManager.riderId;
-  String? get hubId => CacheManager.hubId;
-  String? get merchantId => CacheManager.merchantId;
+  /// Roles granted by the backend. Add your own `is<Role>` helpers here.
   List<String> get roles => CacheManager.rolesList;
 
-  bool get isRider => roles.contains('rider');
-  bool get isMerchant => roles.contains('merchant');
-  bool get isHubAdmin => roles.contains('hub_admin');
-  bool get isUser => roles.isEmpty || roles.contains('user');
-
-  /// Get the primary role for the user
-  String get primaryRole {
-    if (isMerchant) return 'merchant';
-    if (isRider) return 'rider';
-    if (isHubAdmin) return 'hub_admin';
-    return 'user';
-  }
+  bool hasRole(String role) => roles.contains(role);
 
   UserType get userType {
     if (isGuest) return UserType.guest;
@@ -137,9 +123,6 @@ class UserDi extends GetxController {
       CacheManager.removeUserData(),
       CacheManager.removeUserType(),
       CacheManager.removeIsGuest(),
-      CacheManager.removeRiderId(),
-      CacheManager.removeHubId(),
-      CacheManager.removeMerchantId(),
       CacheManager.removeRoles(),
     ]);
     log("User data cleared");

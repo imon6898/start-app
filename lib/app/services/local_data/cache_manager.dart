@@ -1,17 +1,11 @@
-// /// How to use for set
-// ///         await CacheManager.setId(data['id'] ?? "");
-// ///         await CacheManager.setToken(data['token'] ?? "");
-// ///         await CacheManager.setEmail(data['email'] ?? "");
-// ///         await CacheManager.setFirstName(data['firstName'] ?? "");
-// ///         await CacheManager.setSignUpAs(data['signUpAs'] ?? "");
-// ///         await CacheManager.setDriverId(data['driverId'] ?? "");
-// ///         await CacheManager.setPictureBase64(data['pictureBase64'] ?? "");
-
-// /// How to use for get
-// ///         String? email = CacheManager.email;
+// Typed wrapper over SharedPreferences. Add a key to [CacheKeys], then a
+// set/get/remove trio below. Call CacheManager.init() before runApp.
+//   await CacheManager.setToken(token);
+//   final token = CacheManager.token;
 
 import 'dart:convert';
 import 'dart:developer';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CacheManager {
@@ -21,66 +15,97 @@ class CacheManager {
     _pref = await SharedPreferences.getInstance();
   }
 
-  // Setters
-  static Future<bool> setThemeId(String themeId) async {log("Setting Theme ID: $themeId");return await _saveToCache(CacheKeys.themeId.name, themeId);}
+  // ── Auth tokens ──
+  static String? get token => _getFromCache<String>(CacheKeys.token.name);
+  static Future<bool> setToken(String value) => _saveToCache(CacheKeys.token.name, value);
+  static Future<bool> removeToken() => _remove(CacheKeys.token.name);
 
+  static String? get refreshToken => _getFromCache<String>(CacheKeys.refreshToken.name);
+  static Future<bool> setRefreshToken(String value) => _saveToCache(CacheKeys.refreshToken.name, value);
+  static Future<bool> removeRefreshToken() => _remove(CacheKeys.refreshToken.name);
 
+  // ── Session user ──
+  /// The signed-in user serialised as JSON.
+  static String? get userData => _getFromCache<String>(CacheKeys.userData.name);
+  static Future<bool> setUserData(String value) => _saveToCache(CacheKeys.userData.name, value);
+  static Future<bool> removeUserData() => _remove(CacheKeys.userData.name);
 
-  // Getters
-  static String? get getThemeId {var value = _getFromCache<String>(CacheKeys.themeId.name);log("Theme ID: $value");return value;}
+  static String? get userType => _getFromCache<String>(CacheKeys.userType.name);
+  static Future<bool> setUserType(String value) => _saveToCache(CacheKeys.userType.name, value);
+  static Future<bool> removeUserType() => _remove(CacheKeys.userType.name);
 
+  /// Roles are stored as a JSON array string; [rolesList] decodes it.
+  static Future<bool> setRoles(String jsonList) => _saveToCache(CacheKeys.roles.name, jsonList);
+  static Future<bool> removeRoles() => _remove(CacheKeys.roles.name);
+  static List<String> get rolesList {
+    final raw = _getFromCache<String>(CacheKeys.roles.name);
+    if (raw == null || raw.isEmpty) return const [];
+    try {
+      return List<String>.from(jsonDecode(raw) as List);
+    } catch (e) {
+      log("Could not decode cached roles: $e");
+      return const [];
+    }
+  }
 
-  // Removers
-  static Future<bool> removeThemeId() async {log("Removing Theme ID");return await _remove(CacheKeys.themeId.name);}
+  // ── Flags ──
+  static bool get isGuest => _getFromCache<bool>(CacheKeys.isGuest.name) ?? false;
+  static Future<bool> setIsGuest(bool value) => _saveToCache(CacheKeys.isGuest.name, value);
+  static Future<bool> removeIsGuest() => _remove(CacheKeys.isGuest.name);
 
+  static bool get hasSeenOnboarding => _getFromCache<bool>(CacheKeys.hasSeenOnboarding.name) ?? false;
+  static Future<bool> setHasSeenOnboarding(bool value) => _saveToCache(CacheKeys.hasSeenOnboarding.name, value);
+  static Future<bool> removeHasSeenOnboarding() => _remove(CacheKeys.hasSeenOnboarding.name);
 
-  // Removers All
-  static Future<bool> removeAll() async {log("Removing all data from cache");return await _removeAll();}
-  static Future<bool> _removeAll() async {if (_pref == null) {log("SharedPreferences instance is null. Cannot remove all data");return false;}final removed = await _pref!.clear();log("Removed all data from cache: $removed");return removed;}
+  // ── "Remember me" credentials ──
+  static String? get getLoginEmail => _getFromCache<String>(CacheKeys.loginEmail.name);
+  static Future<bool> setLoginEmail(String value) => _saveToCache(CacheKeys.loginEmail.name, value);
+  static Future<bool> removeLoginEmail() => _remove(CacheKeys.loginEmail.name);
 
+  static String? get getLoginPassword => _getFromCache<String>(CacheKeys.loginPassword.name);
+  static Future<bool> setLoginPassword(String value) => _saveToCache(CacheKeys.loginPassword.name, value);
+  static Future<bool> removeLoginPassword() => _remove(CacheKeys.loginPassword.name);
 
+  // ── Theme ──
+  static String? get getThemeId => _getFromCache<String>(CacheKeys.themeId.name);
+  static Future<bool> setThemeId(String themeId) => _saveToCache(CacheKeys.themeId.name, themeId);
+  static Future<bool> removeThemeId() => _remove(CacheKeys.themeId.name);
 
-  // Helper function to remove a value from cache
+  /// Wipes every key — use on logout.
+  static Future<bool> removeAll() async {
+    if (_pref == null) return false;
+    return await _pref!.clear();
+  }
+
   static Future<bool> _remove(String key) async {
-    if (_pref == null) {
-      log("SharedPreferences instance is null. Cannot remove key: $key");
-      return false;
-    }
-    if (!_pref!.containsKey(key)) {
-      log("Key '$key' does not exist in cache. Nothing to remove.");
-      return false;
-    }
-    final removed = await _pref!.remove(key);
-    log("Removed key '$key' from cache: $removed");
-    return removed;
+    if (_pref == null || !_pref!.containsKey(key)) return false;
+    return await _pref!.remove(key);
   }
 
-  // Helper function to get data from cache
   static dynamic _getFromCache<T>(String key) {
-    log("Getting $key as type: ${T.toString()}");
-    if (_pref == null) return '';
-    if (T == int) {
-      return _pref!.getInt(key) ?? 0;
-    } else if (T == bool) {
-      return _pref!.getBool(key) ?? false;
-    }
-    return _pref!.getString(key) ?? '';
+    if (_pref == null) return null;
+    if (T == int) return _pref!.getInt(key);
+    if (T == bool) return _pref!.getBool(key);
+    return _pref!.getString(key);
   }
 
-  // Helper function to save data to cache
   static Future<bool> _saveToCache(String key, dynamic value) async {
-    log("Saving $key with value: $value of type: ${value.runtimeType}");
     if (_pref == null || value == null) return false;
-    log("save To Cache");
-    if (value is bool) {
-      return await _pref!.setBool(key, value);
-    } else if (value is int) {
-      return await _pref!.setInt(key, value);
-    }
+    if (value is bool) return await _pref!.setBool(key, value);
+    if (value is int) return await _pref!.setInt(key, value);
     return await _pref!.setString(key, value);
   }
 }
 
 enum CacheKeys {
+  token,
+  refreshToken,
+  userData,
+  userType,
+  roles,
+  isGuest,
+  hasSeenOnboarding,
+  loginEmail,
+  loginPassword,
   themeId,
 }

@@ -1,0 +1,59 @@
+name: location_picker
+description: >-
+  Map-based location selection: Google Places autocomplete plus a Google Map
+  whose centre pin is the picked point, backed by GPS/IP location services.
+
+# Copy each path from modules/location_picker/<path> to <path> in the project.
+files:
+  - lib/app/widgets/profile_location_picker.dart
+  - lib/app/widgets/map_interaction_listener.dart
+  - lib/app/services/location_service.dart
+  - lib/app/services/ip_geo_location.dart
+
+dependencies:
+  geolocator: ^14.0.3
+  permission_handler: ^13.0.2
+  google_maps_flutter: ^2.18.0
+  google_places_flutter: ^2.1.1
+  geocoding: ^5.0.0
+
+# Already in core, no action needed: dio, get, flutter_dotenv.
+
+env:
+  GOOGLE_MAPS_API_KEY_ALL_IN_ONE: >-
+    Google Maps key read by ApiConstant.gapikey. Needs Maps SDK for Android,
+    Maps SDK for iOS, Places API and Geocoding API enabled.
+
+setup:
+  - >-
+    Register the services before use:
+    Get.put(IpLocationService(), permanent: true);
+    Get.put(LocationService(), permanent: true);
+
+platform_config:
+  android:
+    manifest_permissions:
+      - android.permission.ACCESS_FINE_LOCATION
+      - android.permission.ACCESS_COARSE_LOCATION
+      - android.permission.INTERNET
+    manifest_meta_data: >-
+      Inside <application>:
+      <meta-data android:name="com.google.android.geo.API_KEY"
+      android:value="YOUR_ANDROID_MAPS_API_KEY"/>
+    gradle: minSdk >= 21 in android/app/build.gradle.kts
+  ios:
+    app_delegate: >-
+      ios/Runner/AppDelegate.swift: import GoogleMaps and call
+      GMSServices.provideAPIKey("YOUR_IOS_MAPS_API_KEY") inside
+      application(_:didFinishLaunchingWithOptions:) before the super call.
+    info_plist:
+      NSLocationWhenInUseUsageDescription: We use your location to set your address on the map.
+      NSLocationAlwaysAndWhenInUseUsageDescription: We use your location to set your address on the map.
+    podfile: platform :ios, '14.0' (minimum for google_maps_flutter_ios), then pod install
+
+notes: >-
+  ip_geo_location.dart is an extension that re-adds getApproximateLocation() to
+  the core IpLocationService without overwriting it. geocoding ^5 uses the
+  Geocoding() instance API; geolocator ^14 uses locationSettings instead of
+  desiredAccuracy. The centre pin defaults to Icons.location_on and can be
+  replaced with the pinIcon parameter.

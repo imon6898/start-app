@@ -1,0 +1,35 @@
+name: media_viewer
+description: >-
+  Fullscreen image/video gallery and inline media thumbnail. Pinch + double-tap
+  zoom for images, custom video player with double-tap seek and scrubbable
+  progress bar. Works with network, local file and asset sources.
+
+files:
+  - lib/app/core/helpers/media_viewer.dart
+
+dependencies:
+  cached_network_image: "^4.0.0"
+  video_player: "^2.14.0"
+
+platform_config:
+  android: |
+    Needs INTERNET permission for network media (Flutter adds it to the debug/profile
+    manifests automatically; add it to android/app/src/main/AndroidManifest.xml for release):
+      <uses-permission android:name="android.permission.INTERNET"/>
+    video_player requires minSdk 21+ (Flutter's default minSdk already satisfies this).
+    Plain-HTTP media URLs need cleartext enabled on Android 9+:
+      <application android:usesCleartextTraffic="true" ...>
+  ios: |
+    No permissions needed for network or asset media.
+    Plain-HTTP media URLs need an ATS exception in ios/Runner/Info.plist:
+      <key>NSAppTransportSecurity</key>
+      <dict><key>NSAllowsArbitraryLoads</key><true/></dict>
+    Minimum deployment target iOS 12 (template is on 13.0).
+  notes: |
+    Local-file media (MediaSourceType.file) is read via dart:io File; this module does
+    not pick files itself, so no image_picker / photo gallery permission is required.
+    Relative paths are resolved against ApiConstant.imageUrl (IMAGE_URL in .env) when
+    isEndUrl is true, so IMAGE_URL must be set for that mode.
+
+core_dependencies:
+  - lib/app/services/domain/api_const.dart

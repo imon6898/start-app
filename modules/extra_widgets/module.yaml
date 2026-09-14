@@ -1,0 +1,42 @@
+name: extra_widgets
+description: >-
+  Alternate/duplicate UI widgets removed from core: overlay single- and
+  multi-select dropdowns, a dependency-free paginated grid, a loading overlay,
+  a list-state indicator, and an empty-state view.
+
+# Copied verbatim into the target project's lib/app/widgets/.
+install_dir: lib/app/widgets
+files:
+  - lib/custom_dropdown_button.dart
+  - lib/custom_multi_select_dropdown.dart
+  - lib/paginated_list_view.dart
+  - lib/loading_overlay.dart
+  - lib/my_indicator.dart
+  - lib/empty_data_view.dart
+
+# No extra packages. Listed entries are already in the template pubspec and are
+# only required by empty_data_view.dart (via CustomImage).
+dependencies: {}
+
+optional_dependencies:
+  cached_network_image: ^4.0.0
+  flutter_svg: ^2.3.0
+
+# Template files these widgets import; they must exist in the target project.
+requires:
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/core/enums/enums.dart
+  - lib/app/widgets/custom_image.dart
+
+platform_config: >-
+  None. Pure Dart/Flutter widgets — no permissions, API keys, Info.plist,
+  AndroidManifest, AppDelegate or build.gradle changes needed.
+
+notes: >-
+  Files are independent; install individually if you only need one.
+  own_icon_icons.dart was deliberately excluded — its .ttf is missing from the
+  repo and all 13 glyphs are delivery-domain. See README.md for the
+  glyph -> LucideIcons mapping (lucide_icons_flutter ^3.1.19 is already a
+  template dependency).

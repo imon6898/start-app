@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:flutter_starter/app/core/enums/enums.dart';
 import 'package:flutter_starter/app/feature/auth/auth_controllers/signin_controller.dart';
 import 'package:flutter_starter/app/routes/app_routes.dart';
-import 'package:flutter_starter/app/utils/constants/app_assets.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_starter/app/utils/constants/app_colors.dart';
 import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
-import 'package:flutter_starter/app/utils/platform_utils.dart';
 import 'package:flutter_starter/app/utils/responsive_utils.dart';
 import 'package:flutter_starter/app/utils/validator.dart';
 import 'package:flutter_starter/app/widgets/appbar_widgets/appbar_widget.dart';
-import 'package:flutter_starter/app/widgets/custom_image.dart';
 import 'package:flutter_starter/app/widgets/custom_primary_button.dart';
 import 'package:flutter_starter/app/widgets/custom_text_field.dart';
 
@@ -251,12 +248,11 @@ class SigninScreen extends StatelessWidget {
                       FocusScope.of(context).unfocus();
                       controller.signInWithGoogle();
                     },
-            icon: CustomImage(
-              image: ImageUtils.GoogleIcon,
-              width: R.h(20),
-              height: R.h(20),
-              imageType: ImageType.asset,
-              isSvg: true,
+            // Placeholder glyph — drop in the official brand asset here.
+            icon: Icon(
+              LucideIcons.globe,
+              size: R.h(20),
+              color: CustomColors.black(),
             ),
           ),
         ),
@@ -287,12 +283,11 @@ class SigninScreen extends StatelessWidget {
                       FocusScope.of(context).unfocus();
                       controller.signInWithApple();
                     },
-            icon: CustomImage(
-              image: ImageUtils.AppleIcon,
-              width: R.w(20),
-              height: R.w(20),
-              imageType: ImageType.asset,
-              isSvg: true,
+            // Placeholder glyph — drop in the official brand asset here.
+            icon: Icon(
+              LucideIcons.apple,
+              size: R.w(20),
+              color: CustomColors.black(),
             ),
           ),
         ),

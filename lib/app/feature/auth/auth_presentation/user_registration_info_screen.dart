@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_starter/app/feature/auth/auth_controllers/signup_controller.dart';
+import 'package:flutter_starter/app/routes/app_routes.dart';
 import 'package:flutter_starter/app/utils/constants/app_colors.dart';
 import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
 import 'package:flutter_starter/app/utils/responsive_utils.dart';
@@ -59,7 +60,7 @@ class _UserRegistrationInfoScreenState
 
   Widget _buildSubtitle() {
     return Text(
-      'Sign up to place pickup orders and track your deliveries in real time.'.tr,
+      'Tell us a bit about yourself to finish setting up your account.'.tr,
       style: TextStyle(
         fontFamily: 'Inter',
         fontWeight: FontWeight.w400,
@@ -202,7 +203,7 @@ class _UserRegistrationInfoScreenState
                   text: TextSpan(
                     children: [
                       TextSpan(
-                        text: 'I agree to YaadGlobal '.tr,
+                        text: 'I agree to the '.tr,
                         style: CustomTextStyles.regular14.copyWith(
                           color: CustomColors.paragraph(),
                         ),
@@ -213,7 +214,7 @@ class _UserRegistrationInfoScreenState
                           color: CustomColors.primary(),
                         ),
                         recognizer: TapGestureRecognizer()
-                          ..onTap = () => Get.toNamed('/termsOfServiceScreen'),
+                          ..onTap = () => Get.toNamed(AppRoutes.TermsOfServiceScreen),
                       ),
                       TextSpan(
                         text: ' & ',
@@ -227,7 +228,7 @@ class _UserRegistrationInfoScreenState
                           color: CustomColors.primary(),
                         ),
                         recognizer: TapGestureRecognizer()
-                          ..onTap = () => Get.toNamed('/privacyPolicyScreen'),
+                          ..onTap = () => Get.toNamed(AppRoutes.PrivacyPolicyScreen),
                       ),
                     ],
                   ),
