@@ -83,6 +83,13 @@ class CacheManager {
   static Future<bool> removeLoginPassword() =>
       _remove(CacheKeys.loginPassword.name);
 
+  // ── Locale ──
+  /// Stored as "languageCode_countryCode" (e.g. "bn_BD").
+  static String? get getLocale => _getFromCache<String>(CacheKeys.locale.name);
+  static Future<bool> setLocale(String value) =>
+      _saveToCache(CacheKeys.locale.name, value);
+  static Future<bool> removeLocale() => _remove(CacheKeys.locale.name);
+
   // ── Theme ──
   static String? get getThemeId =>
       _getFromCache<String>(CacheKeys.themeId.name);
@@ -126,5 +133,6 @@ enum CacheKeys {
   hasSeenOnboarding,
   loginEmail,
   loginPassword,
+  locale,
   themeId,
 }

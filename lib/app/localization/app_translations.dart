@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
+import '../services/local_data/cache_manager.dart';
+
 /// Keys are the English source strings, so `.tr` still renders correctly for a
 /// locale that has no entry here. Bengali ships as the worked example.
 class AppTranslations extends Translations {
@@ -12,13 +14,30 @@ class AppTranslations extends Translations {
     Locale('bn', 'BD'),
   ];
 
-  /// Device locale when supported, else [fallbackLocale].
+  /// Saved choice wins, then device locale, then [fallbackLocale].
   static Locale get initialLocale {
+    final saved = _parse(CacheManager.getLocale);
+    if (saved != null) return saved;
+
     final device = Get.deviceLocale;
     final match = supported.where(
       (l) => l.languageCode == device?.languageCode,
     );
     return match.isEmpty ? fallbackLocale : match.first;
+  }
+
+  /// Switches locale and persists it so the next launch keeps the choice.
+  static Future<void> setLocale(Locale locale) async {
+    await CacheManager.setLocale('${locale.languageCode}_${locale.countryCode}');
+    await Get.updateLocale(locale);
+  }
+
+  /// Parses "bn_BD" back to a supported [Locale], or null if unknown.
+  static Locale? _parse(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final parts = raw.split('_');
+    final match = supported.where((l) => l.languageCode == parts.first);
+    return match.isEmpty ? null : match.first;
   }
 
   @override

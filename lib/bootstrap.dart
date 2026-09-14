@@ -8,6 +8,7 @@ import 'app/app.dart';
 import 'app/bindings/view_model_binding.dart';
 import 'app/core/config/env.dart';
 import 'app/services/domain/dev_tools.dart';
+import 'app/services/ip_location_service.dart';
 import 'app/services/local_data/cache_manager.dart';
 import 'app/widgets/appbar_widgets/app_status_bar.dart';
 
@@ -40,6 +41,10 @@ void bootstrap() {
     ]);
     // Global default only; per-screen styling goes through AppStatusBar.
     SystemChrome.setSystemUIOverlayStyle(AppStatusBar.darkIconsStyle);
+
+    // Warms the country cache the phone field reads. Never awaited — startup
+    // must not be gated on network.
+    unawaited(IpLocationService.preload());
 
     // App.build reads ThemeController, so register before the first frame.
     ViewModelBinding().dependencies();

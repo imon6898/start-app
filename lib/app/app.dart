@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:get/get.dart';
 
 import 'bindings/view_model_binding.dart';
@@ -27,6 +28,14 @@ class App extends StatelessWidget {
         translations: AppTranslations(),
         locale: AppTranslations.initialLocale,
         fallbackLocale: AppTranslations.fallbackLocale,
+        // GetX handles `.tr`; these localise Material's own widgets
+        // (date picker, text-selection menu) for non-English locales.
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppTranslations.supported,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: themeController.themeModeRx.value,
