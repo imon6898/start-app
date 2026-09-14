@@ -1,9 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter_starter/app/core/enums/enums.dart';
 import 'package:flutter_starter/app/utils/constants/app_assets.dart';
 import 'package:flutter_starter/app/utils/constants/app_colors.dart';
-import 'package:flutter_starter/app/widgets/custom_image.dart';
+import 'package:flutter_starter/app/widgets/media/custom_image.dart';
 import 'package:flutter/material.dart';
 import '../../utils/responsive_utils.dart';
 
@@ -39,35 +37,34 @@ class AppBarLeading extends StatelessWidget {
               Navigator.pop(context);
             }
           },
-      child:
-          isForcefullyShow || Navigator.canPop(context)
-              ? Container(
-                //color: Colors.red,
-                width: R.w(42),
-                height: R.w(50),
-                padding: EdgeInsets.only(right: R.w(5)),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(R.r(10)),
-                  //color: CustomColors.black(),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    icon ??
-                        CustomImage(
-                          image: ImageUtils.platformBackIcon,
-                          height: R.h(22),
-                          width: R.w(22),
-                          color: CustomColors.black(),
-                          fit: BoxFit.contain,
-                          imageType: ImageType.asset,
-                          isSvg: true,
-                        ),
-                  ],
-                ),
-              )
-              : SizedBox(width: R.w(0)),
+      child: isForcefullyShow || Navigator.canPop(context)
+          ? Container(
+              //color: Colors.red,
+              width: R.w(42),
+              height: R.w(50),
+              padding: EdgeInsets.only(right: R.w(5)),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(R.r(10)),
+                //color: CustomColors.black(),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  icon ??
+                      CustomImage(
+                        image: ImageUtils.platformBackIcon,
+                        height: R.h(22),
+                        width: R.w(22),
+                        color: CustomColors.black(),
+                        fit: BoxFit.contain,
+                        imageType: ImageType.asset,
+                        isSvg: true,
+                      ),
+                ],
+              ),
+            )
+          : SizedBox(width: R.w(0)),
     );
   }
 }

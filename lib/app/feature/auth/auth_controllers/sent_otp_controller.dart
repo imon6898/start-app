@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_starter/app/core/models/country.dart';
 import 'package:flutter_starter/app/feature/auth/auth_logic/auth_api_service.dart';
 import 'package:flutter_starter/app/routes/app_routes.dart';
-import 'package:flutter_starter/app/widgets/custom_phone_text_field.dart';
-import 'package:flutter_starter/app/widgets/custom_snack_bar.dart';
+import 'package:flutter_starter/app/widgets/feedback/custom_snack_bar.dart';
 
 class SentOtpController extends GetxController {
   final GlobalKey<FormState> sentOtpFormKey = GlobalKey<FormState>();
@@ -13,9 +13,9 @@ class SentOtpController extends GetxController {
 
   final RxBool isLoadingSentOtp = false.obs;
 
-  String sentOtpType = "email"; // "email" or "phone"
+  String sentOtpType = 'email'; // "email" or "phone"
   Country? selectedCountry;
-  String fromPage = ""; // Track the source page
+  String fromPage = ''; // Track the source page
 
   @override
   void onInit() {
@@ -36,7 +36,7 @@ class SentOtpController extends GetxController {
   void _getArguments() {
     final arguments = Get.arguments;
     if (arguments is Map<String, dynamic>) {
-      fromPage = arguments['fromPage'] ?? "";
+      fromPage = arguments['fromPage'] ?? '';
     }
   }
 
@@ -55,7 +55,7 @@ class SentOtpController extends GetxController {
     try {
       Map<String, dynamic> params;
 
-      if (sentOtpType == "email") {
+      if (sentOtpType == 'email') {
         params = {'email': sentOtpController.text, 'type': 'email'};
       } else {
         params = {
@@ -72,20 +72,24 @@ class SentOtpController extends GetxController {
           context: Get.context!,
           type: SnackBarType.Success,
           title: 'Success',
-          description: response['data']?['message'] ?? response['message'] ?? 'OTP sent successfully',
+          description:
+              response['data']?['message'] ??
+              response['message'] ??
+              'OTP sent successfully',
         );
 
         Get.toNamed(
           AppRoutes.VerifyOtpScreen,
           arguments: [
-            "fromForgot",
-            sentOtpType == "email" ? sentOtpController.text : null,
-            sentOtpType == "phone" ? mobileNumberCtr.text : null,
+            'fromForgot',
+            sentOtpType == 'email' ? sentOtpController.text : null,
+            sentOtpType == 'phone' ? mobileNumberCtr.text : null,
             selectedCountry?.code,
           ],
         );
       } else {
-        final errorMessage = response?['message'] ?? 'Failed to send OTP. Please try again.';
+        final errorMessage =
+            response?['message'] ?? 'Failed to send OTP. Please try again.';
         showCustomSnackBar(
           context: Get.context!,
           type: SnackBarType.Failure,

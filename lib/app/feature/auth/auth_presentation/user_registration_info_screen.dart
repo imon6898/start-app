@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_starter/app/core/models/country.dart';
 import 'package:flutter_starter/app/feature/auth/auth_controllers/signup_controller.dart';
 import 'package:flutter_starter/app/routes/app_routes.dart';
 import 'package:flutter_starter/app/utils/constants/app_colors.dart';
@@ -8,9 +9,10 @@ import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
 import 'package:flutter_starter/app/utils/responsive_utils.dart';
 import 'package:flutter_starter/app/utils/validator.dart';
 import 'package:flutter_starter/app/widgets/appbar_widgets/appbar_widget.dart';
-import 'package:flutter_starter/app/widgets/custom_phone_text_field.dart';
-import 'package:flutter_starter/app/widgets/custom_primary_button.dart';
-import 'package:flutter_starter/app/widgets/custom_text_field.dart';
+import 'package:flutter_starter/app/widgets/inputs/custom_phone_text_field.dart';
+import 'package:flutter_starter/app/widgets/buttons/custom_primary_button.dart';
+import 'package:flutter_starter/app/widgets/inputs/custom_text_field.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class UserRegistrationInfoScreen extends StatefulWidget {
   const UserRegistrationInfoScreen({super.key});
@@ -106,30 +108,31 @@ class _UserRegistrationInfoScreenState
           SizedBox(height: R.h(4)),
 
           CustomTextField(
-                  controller: c.emailRegCtr,
-                  textHeading: 'Email Address'.tr,
-                  hintText: 'Enter your email'.tr,
-                  required: true,
-                  inputType: TextInputType.emailAddress,
-                  validator: Validators.emailValidator.call,
-                ),
+            controller: c.emailRegCtr,
+            textHeading: 'Email Address'.tr,
+            hintText: 'Enter your email'.tr,
+            required: true,
+            inputType: TextInputType.emailAddress,
+            validator: Validators.emailValidator.call,
+          ),
 
           SizedBox(height: R.h(4)),
           CustomPhoneTextField(
-                  controller: c.mobileNumberCtr,
-                  textHeading: 'Phone Number'.tr,
-                  hintText: 'Enter phone number'.tr,
-                  required: true,
-                  initialCountry: c.selectedCountry ??
-                      CountryData.fromDeviceLocale() ??
-                      CountryData.fromIpCached() ??
-                      CountryData.getDefaultCountry(),
-                  onCountryChanged: (Country country) =>
-                      c.updateSelectedCountry(country),
-                  validator: Validators.phoneValidatorFor(
-                    countryCode: c.selectedCountry?.code,
-                  ),
-                  ),
+            controller: c.mobileNumberCtr,
+            textHeading: 'Phone Number'.tr,
+            hintText: 'Enter phone number'.tr,
+            required: true,
+            initialCountry:
+                c.selectedCountry ??
+                CountryData.fromDeviceLocale() ??
+                CountryData.fromIpCached() ??
+                CountryData.getDefaultCountry(),
+            onCountryChanged: (Country country) =>
+                c.updateSelectedCountry(country),
+            validator: Validators.phoneValidatorFor(
+              countryCode: c.selectedCountry?.code,
+            ),
+          ),
 
           SizedBox(height: R.h(4)),
           CustomTextField(
@@ -189,8 +192,8 @@ class _UserRegistrationInfoScreenState
                   padding: EdgeInsets.only(right: R.w(8)),
                   child: Icon(
                     c.isAccept.value
-                        ? Icons.check_box
-                        : Icons.check_box_outline_blank,
+                        ? LucideIcons.squareCheck
+                        : LucideIcons.square,
                     color: c.isAccept.value
                         ? CustomColors.primary()
                         : CustomColors.whiteStroke(),
@@ -214,7 +217,8 @@ class _UserRegistrationInfoScreenState
                           color: CustomColors.primary(),
                         ),
                         recognizer: TapGestureRecognizer()
-                          ..onTap = () => Get.toNamed(AppRoutes.TermsOfServiceScreen),
+                          ..onTap = () =>
+                              Get.toNamed(AppRoutes.TermsOfServiceScreen),
                       ),
                       TextSpan(
                         text: ' & ',
@@ -228,7 +232,8 @@ class _UserRegistrationInfoScreenState
                           color: CustomColors.primary(),
                         ),
                         recognizer: TapGestureRecognizer()
-                          ..onTap = () => Get.toNamed(AppRoutes.PrivacyPolicyScreen),
+                          ..onTap = () =>
+                              Get.toNamed(AppRoutes.PrivacyPolicyScreen),
                       ),
                     ],
                   ),

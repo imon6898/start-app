@@ -1,8 +1,7 @@
-import "package:flutter/material.dart";
-import "package:get/get.dart";
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
-import "../services/domain/dev_tools.dart";
-
+import '../services/domain/dev_tools.dart';
 
 /// 🚀 Universal Responsive Helper Class
 /// Works on ALL devices: Smart Watch, Phone, Tablet, Laptop, TV
@@ -131,7 +130,7 @@ class R {
 
   /// Convert Figma pixels to responsive font size
   static double sp(double figmaPixels) {
-    double size = h(figmaPixels);
+    final double size = h(figmaPixels);
 
     // Ensure readable font sizes per device type
     if (isWatch) {
@@ -244,14 +243,14 @@ class R {
   /// Print current device information
   static void printDeviceInfo() {
     final deviceType = isWatch
-        ? "Watch"
+        ? 'Watch'
         : isPhone
-            ? "Phone"
-            : isTablet
-                ? "Tablet"
-                : isDesktop
-                    ? "Desktop"
-                    : "TV";
+        ? 'Phone'
+        : isTablet
+        ? 'Tablet'
+        : isDesktop
+        ? 'Desktop'
+        : 'TV';
 
     devPrint('''
     📱 DEVICE INFORMATION:

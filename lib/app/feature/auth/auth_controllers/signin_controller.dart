@@ -9,7 +9,7 @@ import 'package:flutter_starter/app/feature/auth/auth_logic/auth_api_service.dar
 import 'package:flutter_starter/app/feature/auth/auth_models/auth_response.dart';
 import 'package:flutter_starter/app/routes/app_routes.dart';
 import 'package:flutter_starter/app/services/local_data/cache_manager.dart';
-import 'package:flutter_starter/app/widgets/custom_snack_bar.dart';
+import 'package:flutter_starter/app/widgets/feedback/custom_snack_bar.dart';
 
 class SigninController extends GetxController {
   final GlobalKey<FormState> signInFormKey = GlobalKey<FormState>();
@@ -95,7 +95,7 @@ class SigninController extends GetxController {
             final email = emailController.text;
             Get.toNamed(
               AppRoutes.VerifyOtpScreen,
-              arguments: ["fromCreateAccount", email, passwordController.text],
+              arguments: ['fromCreateAccount', email, passwordController.text],
             );
             // Send OTP to the user's email
             final otpParams = {'email': user?.email};
@@ -110,16 +110,16 @@ class SigninController extends GetxController {
               if (otpBaseResponse.statusCode == 201) {
                 showCustomSnackBar(
                   context: Get.context!,
-                  title: "warning".tr,
+                  title: 'warning'.tr,
                   description:
-                      "Please verify your email to continue. OTP has been sent to your email.",
+                      'Please verify your email to continue. OTP has been sent to your email.',
                   type: SnackBarType.Warning,
                 );
               } else {
                 showCustomSnackBar(
                   context: Get.context!,
-                  title: "Error",
-                  description: "Failed to send OTP. Please try again.",
+                  title: 'Error',
+                  description: 'Failed to send OTP. Please try again.',
                   type: SnackBarType.Failure,
                 );
               }
@@ -130,18 +130,16 @@ class SigninController extends GetxController {
             final roles = baseResponse.data!.roles;
             await Future.wait([
               CacheManager.setToken(token!),
-              if (refreshToken != null) CacheManager.setRefreshToken(refreshToken),
+              if (refreshToken != null)
+                CacheManager.setRefreshToken(refreshToken),
               CacheManager.setUserData(jsonEncode(user?.toJson())),
               CacheManager.removeIsGuest(), // Clear guest mode on login
-              if (roles != null && roles.isNotEmpty) CacheManager.setRoles(jsonEncode(roles)),
+              if (roles != null && roles.isNotEmpty)
+                CacheManager.setRoles(jsonEncode(roles)),
             ]);
 
-            if (Get.isRegistered<UserDi>()) {
-              await Get.find<UserDi>().clearGuestMode(); // Clear guest mode
-              await Get.find<UserDi>().refreshUser(); // ✅
-            } else {
-              Get.put(UserDi(), permanent: true); // First-time init
-            }
+            await Get.find<UserDi>().clearGuestMode();
+            await Get.find<UserDi>().refreshUser();
 
             if (rememberMe.value) {
               await CacheManager.setLoginEmail(emailController.text);
@@ -155,8 +153,8 @@ class SigninController extends GetxController {
             // User is verified, go to dashboard
             showCustomSnackBar(
               context: Get.context!,
-              title: "Success",
-              description: "Login successful",
+              title: 'Success',
+              description: 'Login successful',
               type: SnackBarType.Success,
             );
 
@@ -174,8 +172,8 @@ class SigninController extends GetxController {
 
           showCustomSnackBar(
             context: Get.context!,
-            title: "Authentication failed",
-            description: "Please check your credentials",
+            title: 'Authentication failed',
+            description: 'Please check your credentials',
             //baseResponse.message,
             type: SnackBarType.Failure,
           );
@@ -186,7 +184,7 @@ class SigninController extends GetxController {
 
         showCustomSnackBar(
           context: Get.context!,
-          title: "Error",
+          title: 'Error',
           description: 'Please fill in all fields',
           type: SnackBarType.Failure,
         );
@@ -239,7 +237,7 @@ class SigninController extends GetxController {
 
       showCustomSnackBar(
         context: Get.context!,
-        title: "Error",
+        title: 'Error',
         description: 'An error occurred: ${e.toString()}',
         type: SnackBarType.Failure,
       );
@@ -253,13 +251,7 @@ class SigninController extends GetxController {
       // Set guest mode in cache
       await CacheManager.setIsGuest(true);
 
-      // Initialize UserDi if not already registered
-      if (Get.isRegistered<UserDi>()) {
-        await Get.find<UserDi>().setGuestMode(true);
-      } else {
-        Get.put(UserDi(), permanent: true);
-        await Get.find<UserDi>().setGuestMode(true);
-      }
+      await Get.find<UserDi>().setGuestMode(true);
 
       // Navigate to dashboard as guest
       Get.offAllNamed(AppRoutes.DashboardScreen);

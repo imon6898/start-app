@@ -6,8 +6,8 @@ import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
 import 'package:flutter_starter/app/utils/responsive_utils.dart';
 import 'package:flutter_starter/app/utils/validator.dart';
 import 'package:flutter_starter/app/widgets/appbar_widgets/appbar_widget.dart';
-import 'package:flutter_starter/app/widgets/custom_primary_button.dart';
-import 'package:flutter_starter/app/widgets/custom_text_field.dart';
+import 'package:flutter_starter/app/widgets/buttons/custom_primary_button.dart';
+import 'package:flutter_starter/app/widgets/inputs/custom_text_field.dart';
 
 class RetypePassScreen extends StatelessWidget {
   const RetypePassScreen({super.key});
@@ -18,7 +18,7 @@ class RetypePassScreen extends StatelessWidget {
       builder: (c) {
         return Scaffold(
           backgroundColor: CustomColors.BGColor(),
-          appBar: AppBarWidget(title: "Set-up new password".tr),
+          appBar: AppBarWidget(title: 'Set-up new password'.tr),
           body: _body(context, c),
           bottomSheet: Padding(
             padding: EdgeInsets.only(
@@ -31,7 +31,7 @@ class RetypePassScreen extends StatelessWidget {
               height: R.h(44),
               child: CustomButton(
                 loading: c.isLoadingResetPass.value,
-                text: "Change Password".tr,
+                text: 'Change Password'.tr,
                 onPressed: () async {
                   FocusScope.of(context).unfocus();
                   if (c.resetPassFormKey.currentState!.validate()) {
@@ -56,8 +56,7 @@ class RetypePassScreen extends StatelessWidget {
           children: [
             SizedBox(height: R.h(44)),
             Text(
-              "Create a new password to secure your account and continue using Yaad"
-                  .tr,
+              'Create a new password to secure your account'.tr,
               style: CustomTextStyles.regular16.copyWith(
                 color: CustomColors.paragraph(),
               ),
@@ -67,8 +66,8 @@ class RetypePassScreen extends StatelessWidget {
             SizedBox(height: R.h(20)),
             CustomTextField(
               controller: controller.newPasswordController,
-              textHeading: "New Password".tr,
-              hintText: "Enter new password".tr,
+              textHeading: 'New Password'.tr,
+              hintText: 'Enter new password'.tr,
               isPassword: true,
               inputType: TextInputType.visiblePassword,
               validator: Validators.registerPasswordValidator.call,
@@ -76,8 +75,8 @@ class RetypePassScreen extends StatelessWidget {
             SizedBox(height: R.h(10)),
             CustomTextField(
               controller: controller.confirmPasswordController,
-              textHeading: "Confirm New Password".tr,
-              hintText: "Enter confirm new password".tr,
+              textHeading: 'Confirm New Password'.tr,
+              hintText: 'Enter confirm new password'.tr,
               isPassword: true,
               inputType: TextInputType.visiblePassword,
               validator: Validators.confirmPasswordValidator(

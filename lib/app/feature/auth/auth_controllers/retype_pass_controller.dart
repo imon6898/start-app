@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_starter/app/feature/auth/auth_logic/auth_api_service.dart';
 import 'package:flutter_starter/app/routes/app_routes.dart';
-import 'package:flutter_starter/app/widgets/custom_snack_bar.dart';
+import 'package:flutter_starter/app/widgets/feedback/custom_snack_bar.dart';
 
 class RetypePassController extends GetxController {
   final GlobalKey<FormState> resetPassFormKey = GlobalKey<FormState>();
@@ -13,10 +13,10 @@ class RetypePassController extends GetxController {
   final RxBool isLoadingResetPass = false.obs;
 
   // Get arguments from navigation
-  String email = "";
-  String phone = "";
+  String email = '';
+  String phone = '';
   String? countryCode;
-  String otp = "";
+  String otp = '';
 
   @override
   void onInit() {
@@ -36,10 +36,10 @@ class RetypePassController extends GetxController {
   void _getArguments() {
     final arguments = Get.arguments;
     if (arguments is Map<String, dynamic>) {
-      email = arguments['email'] ?? "";
-      phone = arguments['phone'] ?? "";
+      email = arguments['email'] ?? '';
+      phone = arguments['phone'] ?? '';
       countryCode = arguments['countryCode'];
-      otp = arguments['otp'] ?? "";
+      otp = arguments['otp'] ?? '';
     }
   }
 
@@ -62,7 +62,7 @@ class RetypePassController extends GetxController {
     isLoadingResetPass.value = true;
 
     try {
-      Map<String, dynamic> params = {
+      final Map<String, dynamic> params = {
         'email': email.isNotEmpty ? email : null,
         'otp': otp,
         'password': newPasswordController.text,
@@ -72,7 +72,8 @@ class RetypePassController extends GetxController {
       final response = await _authRepo.postResetPasswordRepo(params);
 
       if (response != null && response['status'] == true) {
-        final message = response['data']?['message'] ??
+        final message =
+            response['data']?['message'] ??
             response['message'] ??
             'Password reset successfully. Please login with your new password.';
 
@@ -93,7 +94,8 @@ class RetypePassController extends GetxController {
           );
         }
       } else {
-        final errorMessage = response?['data']?['message'] ??
+        final errorMessage =
+            response?['data']?['message'] ??
             response?['message'] ??
             'Failed to reset password. Please try again.';
         showCustomSnackBar(

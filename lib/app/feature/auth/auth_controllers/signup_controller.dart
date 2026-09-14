@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_starter/app/core/models/country.dart';
 import 'package:flutter_starter/app/feature/auth/auth_logic/auth_api_service.dart';
 import 'package:flutter_starter/app/routes/app_routes.dart';
-import 'package:flutter_starter/app/widgets/custom_phone_text_field.dart';
-import 'package:flutter_starter/app/widgets/custom_snack_bar.dart';
+import 'package:flutter_starter/app/widgets/feedback/custom_snack_bar.dart';
 
 class SignupController extends GetxController {
   /// Used by `signup_screen.dart`. NOT used by `user_registration_info_screen.dart`,
@@ -84,7 +84,7 @@ class SignupController extends GetxController {
     try {
       final phoneWithCode =
           '${selectedCountry?.dialCode ?? ''}${mobileNumberCtr.text}';
-      Map<String, dynamic> params = {
+      final Map<String, dynamic> params = {
         'first_name': firstNameCtr.text,
         'last_name': lastNameCtr.text,
         'email': emailRegCtr.text,
@@ -113,11 +113,11 @@ class SignupController extends GetxController {
         Get.toNamed(
           AppRoutes.VerifyOtpScreen,
           arguments: [
-            "fromCreateAccount",
-            emailRegCtr.text,          // index 1: email
-            phoneWithCode,             // index 2: phone (with dial code)
-            selectedCountry?.code,     // index 3: countryCode
-            passwordRegCtr.text,       // index 4: password (for auto-login after OTP)
+            'fromCreateAccount',
+            emailRegCtr.text, // index 1: email
+            phoneWithCode, // index 2: phone (with dial code)
+            selectedCountry?.code, // index 3: countryCode
+            passwordRegCtr.text, // index 4: password (for auto-login after OTP)
           ],
         );
       } else {

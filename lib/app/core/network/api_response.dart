@@ -1,8 +1,8 @@
 /// Represents the status of an API request
 enum Status {
-  loading,    // Request is in progress
-  completed,  // Request completed successfully
-  error,      // Request failed with an error
+  loading, // Request is in progress
+  completed, // Request completed successfully
+  error, // Request failed with an error
 }
 
 /// Generic API response wrapper
@@ -25,7 +25,7 @@ class ApiResponse<T> {
   factory ApiResponse.loading() => ApiResponse._(status: Status.loading);
 
   /// Create a completed response with data
-  factory ApiResponse.completed(T data) => 
+  factory ApiResponse.completed(T data) =>
       ApiResponse._(status: Status.completed, data: data);
 
   /// Create an error response
@@ -33,13 +33,12 @@ class ApiResponse<T> {
     String? message,
     dynamic error,
     StackTrace? stackTrace,
-  }) =>
-      ApiResponse._(
-        status: Status.error,
-        message: message ?? 'An error occurred',
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => ApiResponse._(
+    status: Status.error,
+    message: message ?? 'An error occurred',
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   /// Check if the request is loading
   bool get isLoading => status == Status.loading;

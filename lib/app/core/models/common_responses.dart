@@ -11,11 +11,10 @@ class Location {
       Location(lat: lat ?? this.lat, lon: lon ?? this.lon);
 
   factory Location.fromJson(Map<String, dynamic> json) =>
-      Location(lat: json["lat"]?.toDouble(), lon: json["lon"]?.toDouble());
+      Location(lat: json['lat']?.toDouble(), lon: json['lon']?.toDouble());
 
-  Map<String, dynamic> toJson() => {"lat": lat, "lon": lon};
+  Map<String, dynamic> toJson() => {'lat': lat, 'lon': lon};
 }
-
 
 /// Social Links
 class SocialLinks {
@@ -24,12 +23,7 @@ class SocialLinks {
   final String? linkedIn;
   final String? twitter;
 
-  SocialLinks({
-    this.website,
-    this.facebook,
-    this.linkedIn,
-    this.twitter,
-  });
+  SocialLinks({this.website, this.facebook, this.linkedIn, this.twitter});
 
   SocialLinks copyWith({
     String? website,
@@ -62,7 +56,6 @@ class SocialLinks {
   };
 }
 
-
 /// Skill
 class Skill {
   final String id;
@@ -78,16 +71,16 @@ class Skill {
   });
 
   factory Skill.fromJson(Map<String, dynamic> json) => Skill(
-    id: json["id"],
-    skillName: json["skill_name"],
-    createdAt: DateTime.parse(json["created_at"]),
-    updatedAt: DateTime.parse(json["updated_at"]),
+    id: json['id'],
+    skillName: json['skill_name'],
+    createdAt: DateTime.parse(json['created_at']),
+    updatedAt: DateTime.parse(json['updated_at']),
   );
 
   Map<String, dynamic> toJson() => {
-    "id": id,
-    "skill_name": skillName,
-    "created_at": createdAt.toIso8601String(),
-    "updated_at": updatedAt.toIso8601String(),
+    'id': id,
+    'skill_name': skillName,
+    'created_at': createdAt.toIso8601String(),
+    'updated_at': updatedAt.toIso8601String(),
   };
 }

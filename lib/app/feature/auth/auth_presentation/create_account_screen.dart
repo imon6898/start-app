@@ -7,7 +7,8 @@ import 'package:flutter_starter/app/utils/constants/app_colors.dart';
 import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
 import 'package:flutter_starter/app/utils/responsive_utils.dart';
 import 'package:flutter_starter/app/widgets/appbar_widgets/appbar_widget.dart';
-import 'package:flutter_starter/app/widgets/custom_primary_button.dart';
+import 'package:flutter_starter/app/widgets/buttons/custom_primary_button.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class CreateAccountScreen extends StatelessWidget {
   const CreateAccountScreen({super.key});
@@ -18,7 +19,7 @@ class CreateAccountScreen extends StatelessWidget {
       builder: (c) {
         return Scaffold(
           backgroundColor: CustomColors.white(),
-          appBar: AppBarWidget(title: "Create New Account".tr),
+          appBar: AppBarWidget(title: 'Create New Account'.tr),
           body: _body(context, c),
           bottomNavigationBar: _bottomBar(context, c),
         );
@@ -49,18 +50,18 @@ class CreateAccountScreen extends StatelessWidget {
           _buildRoleCard(
             controller: controller,
             role: AccountRole.personal,
-            icon: Icons.person_outline,
-            title: "Personal account".tr,
-            subtitle: "For individuals using the app on their own.".tr,
+            icon: LucideIcons.user,
+            title: 'Personal account'.tr,
+            subtitle: 'For individuals using the app on their own.'.tr,
             isSelected: selected == AccountRole.personal,
           ),
           SizedBox(height: R.h(12)),
           _buildRoleCard(
             controller: controller,
             role: AccountRole.business,
-            icon: Icons.storefront_outlined,
-            title: "Business account".tr,
-            subtitle: "For teams and organizations.".tr,
+            icon: LucideIcons.store,
+            title: 'Business account'.tr,
+            subtitle: 'For teams and organizations.'.tr,
             isSelected: selected == AccountRole.business,
           ),
         ],
@@ -86,7 +87,9 @@ class CreateAccountScreen extends StatelessWidget {
           color: CustomColors.white(),
           borderRadius: BorderRadius.circular(R.r(16)),
           border: Border.all(
-            color: isSelected ? CustomColors.black() : CustomColors.whiteStroke(),
+            color: isSelected
+                ? CustomColors.black()
+                : CustomColors.whiteStroke(),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
@@ -130,13 +133,13 @@ class CreateAccountScreen extends StatelessWidget {
       text: TextSpan(
         children: [
           TextSpan(
-            text: "Already have an account? ".tr,
+            text: 'Already have an account? '.tr,
             style: CustomTextStyles.semiBold14.copyWith(
               color: CustomColors.primary(),
             ),
           ),
           TextSpan(
-            text: "Log In".tr,
+            text: 'Log In'.tr,
             style: CustomTextStyles.semiBold14.copyWith(
               color: CustomColors.primary(),
             ),
@@ -180,7 +183,7 @@ class CreateAccountScreen extends StatelessWidget {
           width: double.infinity,
           height: R.h(48),
           child: CustomButton(
-            text: "Get Started".tr,
+            text: 'Get Started'.tr,
             borderRadius: 8,
             backgroundColor: isEnabled
                 ? CustomColors.primary()

@@ -8,8 +8,8 @@ import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
 import 'package:flutter_starter/app/utils/responsive_utils.dart';
 import 'package:flutter_starter/app/utils/validator.dart';
 import 'package:flutter_starter/app/widgets/appbar_widgets/appbar_widget.dart';
-import 'package:flutter_starter/app/widgets/custom_primary_button.dart';
-import 'package:flutter_starter/app/widgets/custom_text_field.dart';
+import 'package:flutter_starter/app/widgets/buttons/custom_primary_button.dart';
+import 'package:flutter_starter/app/widgets/inputs/custom_text_field.dart';
 
 class SigninScreen extends StatelessWidget {
   const SigninScreen({super.key});
@@ -23,7 +23,7 @@ class SigninScreen extends StatelessWidget {
           appBar: PreferredSize(
             preferredSize: Size.fromHeight(kToolbarHeight + R.h(10)),
             child: AppBarWidget(
-              title: "Login".tr,
+              title: 'Login'.tr,
               backgroundColor: CustomColors.transparent(),
               elevation: 0,
               // toolbarActions: [
@@ -61,14 +61,14 @@ class SigninScreen extends StatelessWidget {
           children: [
             SizedBox(height: R.h(20)),
             Text(
-              "Welcome to Logistics Rider".tr,
+              'Welcome back'.tr,
               style: CustomTextStyles.semiBold20.copyWith(
                 color: CustomColors.primary(),
               ),
             ),
             SizedBox(height: R.h(5)),
             Text(
-              "Please enter your registration email & password".tr,
+              'Please enter your registration email & password'.tr,
               style: CustomTextStyles.regular14.copyWith(
                 color: CustomColors.paragraph(),
               ),
@@ -119,7 +119,6 @@ class SigninScreen extends StatelessWidget {
             //
             // if (PlatformUtils.isIOS)
             // buildAppleSigninButton(context, controller),
-
             SizedBox(height: R.h(40)),
             buildDontHaveAccount(context, controller),
             SizedBox(height: R.h(20)),
@@ -139,21 +138,21 @@ class SigninScreen extends StatelessWidget {
       // is ever offered.
       child: AutofillGroup(
         child: Container(
-          padding: R.pad(horizontal: R.w(16)),
+          padding: R.pad(horizontal: 16),
           child: Column(
             children: [
               CustomTextField(
                 controller: controller.emailController,
-                textHeading: "Email Address".tr,
-                hintText: "Enter email address".tr,
+                textHeading: 'Email Address'.tr,
+                hintText: 'Enter email address'.tr,
                 inputType: TextInputType.emailAddress,
                 validator: Validators.emailValidator.call,
               ),
               SizedBox(height: R.h(10)),
               CustomTextField(
                 controller: controller.passwordController,
-                textHeading: "Password".tr,
-                hintText: "Enter password".tr,
+                textHeading: 'Password'.tr,
+                hintText: 'Enter password'.tr,
                 isPassword: true,
                 inputType: TextInputType.visiblePassword,
                 inputAction: TextInputAction.done,
@@ -177,13 +176,13 @@ class SigninScreen extends StatelessWidget {
           FocusScope.of(context).unfocus();
           Get.toNamed(
             AppRoutes.SentOtpScreen,
-            arguments: {"fromPage": "fromForgot"},
+            arguments: {'fromPage': 'fromForgot'},
           );
         },
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: R.w(16)),
           child: Text(
-            "Forget Password?".tr,
+            'Forget Password?'.tr,
             style: CustomTextStyles.medium14.copyWith(
               color: CustomColors.primary(),
             ),
@@ -198,27 +197,26 @@ class SigninScreen extends StatelessWidget {
     return Obx(() {
       final isDisabled = controller.isLoadingGoogleSignIn.value;
       return Container(
-        padding: R.pad(horizontal: R.w(16)),
+        padding: R.pad(horizontal: 16),
         width: double.infinity,
         height: R.h(44),
         child: Opacity(
           opacity: isDisabled ? 0.5 : 1.0,
           child: CustomButton(
             loading: controller.isLoadingSignIn.value,
-            text: "Login".tr,
+            text: 'Login'.tr,
             textStyle: CustomTextStyles.medium16.copyWith(
               color: CustomColors.white(),
             ),
-            onPressed:
-                isDisabled
-                    ? () {}
-                    : () {
-                      FocusScope.of(context).unfocus();
-                      //Get.offAllNamed(AppRoutes.DashboardScreen);
-                      if (controller.signInFormKey.currentState!.validate()) {
-                        controller.signIn();
-                      }
-                    },
+            onPressed: isDisabled
+                ? () {}
+                : () {
+                    FocusScope.of(context).unfocus();
+                    //Get.offAllNamed(AppRoutes.DashboardScreen);
+                    if (controller.signInFormKey.currentState!.validate()) {
+                      controller.signIn();
+                    }
+                  },
           ),
         ),
       );
@@ -232,22 +230,21 @@ class SigninScreen extends StatelessWidget {
     return Obx(() {
       final isDisabled = controller.isLoadingSignIn.value;
       return Container(
-        padding: R.pad(horizontal: R.w(16)),
+        padding: R.pad(horizontal: 16),
         width: double.infinity,
         height: R.h(44),
         child: Opacity(
           opacity: isDisabled ? 0.5 : 1.0,
           child: CustomOutlinedButton(
-            text: "Login with Google".tr,
+            text: 'Login with Google'.tr,
             textStyle: CustomTextStyles.medium12,
             loading: controller.isLoadingGoogleSignIn.value,
-            onPressed:
-                isDisabled
-                    ? () {}
-                    : () {
-                      FocusScope.of(context).unfocus();
-                      controller.signInWithGoogle();
-                    },
+            onPressed: isDisabled
+                ? () {}
+                : () {
+                    FocusScope.of(context).unfocus();
+                    controller.signInWithGoogle();
+                  },
             // Placeholder glyph — drop in the official brand asset here.
             icon: Icon(
               LucideIcons.globe,
@@ -267,22 +264,21 @@ class SigninScreen extends StatelessWidget {
     return Obx(() {
       final isDisabled = controller.isLoadingSignIn.value;
       return Container(
-        padding: R.pad(horizontal: R.w(16)),
+        padding: R.pad(horizontal: 16),
         width: double.infinity,
         height: R.h(44),
         child: Opacity(
           opacity: isDisabled ? 0.5 : 1.0,
           child: CustomOutlinedButton(
-            text: "Login With Apple".tr,
+            text: 'Login With Apple'.tr,
             textStyle: CustomTextStyles.medium12,
             loading: controller.isLoadingAppleSignIn.value,
-            onPressed:
-                isDisabled
-                    ? () {}
-                    : () {
-                      FocusScope.of(context).unfocus();
-                      controller.signInWithApple();
-                    },
+            onPressed: isDisabled
+                ? () {}
+                : () {
+                    FocusScope.of(context).unfocus();
+                    controller.signInWithApple();
+                  },
             // Placeholder glyph — drop in the official brand asset here.
             icon: Icon(
               LucideIcons.apple,
@@ -305,7 +301,7 @@ class SigninScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            "Don’t have an account?".tr,
+            'Don’t have an account?'.tr,
             style: CustomTextStyles.medium14.copyWith(
               color: CustomColors.textGray(),
             ),
@@ -317,7 +313,7 @@ class SigninScreen extends StatelessWidget {
               Get.toNamed(AppRoutes.CreateAccountScreen);
             },
             child: Text(
-              "Create New Account".tr,
+              'Create New Account'.tr,
               style: CustomTextStyles.bold14.copyWith(
                 color: CustomColors.primary(),
               ),

@@ -10,27 +10,24 @@ import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../routes/app_routes.dart';
 import '../../utils/constants/app_colors.dart';
-import '../../widgets/custom_snack_bar.dart';
+import 'package:flutter_starter/app/widgets/feedback/custom_snack_bar.dart';
 import '../local_data/cache_manager.dart';
 import 'api_const.dart';
 import 'dev_tools.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class ApiService {
   late Dio _dio;
   static bool _isRefreshing = false;
   static Completer<bool>? _refreshCompleter;
 
-  ApiService({bool? googleBaseUrl, bool? logisticsBaseUrl}) {
-    BaseOptions options = BaseOptions(
-      baseUrl: logisticsBaseUrl == true
-          ? (kDebugMode ? ApiConstant.devLogisticsBaseUrl : ApiConstant.logisticsBaseUrl)
-          : kDebugMode
-              ? googleBaseUrl == true
-                    ? ApiConstant.googleBaseUrl
-                    : ApiConstant.devBaseUrl
-              : googleBaseUrl == true
-              ? ApiConstant.googleBaseUrl
-              : ApiConstant.baseUrl,
+  ApiService({bool? googleBaseUrl, bool? secondaryBaseUrl}) {
+    final BaseOptions options = BaseOptions(
+      baseUrl: googleBaseUrl == true
+          ? ApiConstant.googleBaseUrl
+          : secondaryBaseUrl == true
+          ? ApiConstant.activeSecondaryBaseUrl
+          : ApiConstant.activeBaseUrl,
       receiveTimeout: const Duration(seconds: 50),
       connectTimeout: const Duration(seconds: 50),
     );
@@ -39,16 +36,16 @@ class ApiService {
     options.headers['Content-Type'] = 'application/json';
 
     try {
-      devPrint("token: ${CacheManager.token}");
-      options.headers["Authorization"] = "Bearer ${CacheManager.token}";
+      devPrint('token: ${CacheManager.token}');
+      options.headers['Authorization'] = 'Bearer ${CacheManager.token}';
     } catch (e) {
-      devPrint("Authorization header error = $e");
+      devPrint('Authorization header error = $e');
     }
 
     _dio = Dio(options);
     _dio.httpClientAdapter = IOHttpClientAdapter(
       createHttpClient: () {
-        HttpClient client = HttpClient();
+        final HttpClient client = HttpClient();
         client.badCertificateCallback =
             (X509Certificate cert, String host, int port) => kDebugMode;
         return client;
@@ -62,7 +59,7 @@ class ApiService {
           // Always use the latest token from cache for each request
           final token = CacheManager.token;
           if (token != null && token.isNotEmpty) {
-            options.headers["Authorization"] = "Bearer $token";
+            options.headers['Authorization'] = 'Bearer $token';
           }
           handler.next(options);
         },
@@ -89,7 +86,7 @@ class ApiService {
               if (success) {
                 // Retry with new token
                 final opts = error.requestOptions;
-                opts.headers["Authorization"] = "Bearer ${CacheManager.token}";
+                opts.headers['Authorization'] = 'Bearer ${CacheManager.token}';
                 opts.extra['isRetry'] = true;
                 final retryResponse = await _dio.fetch(opts);
                 return handler.resolve(retryResponse);
@@ -110,7 +107,7 @@ class ApiService {
           try {
             refreshed = await _refreshToken();
           } catch (e) {
-            devPrint("Token refresh error: $e");
+            devPrint('Token refresh error: $e');
             refreshed = false;
           } finally {
             if (!completer.isCompleted) completer.complete(refreshed);
@@ -127,12 +124,12 @@ class ApiService {
           // out. Just bubble the error up so the caller can handle it.
           try {
             final opts = error.requestOptions;
-            opts.headers["Authorization"] = "Bearer ${CacheManager.token}";
+            opts.headers['Authorization'] = 'Bearer ${CacheManager.token}';
             opts.extra['isRetry'] = true;
             final retryResponse = await _dio.fetch(opts);
             return handler.resolve(retryResponse);
           } catch (e) {
-            devPrint("Retry after refresh failed: $e");
+            devPrint('Retry after refresh failed: $e');
             return handler.next(error);
           }
         },
@@ -160,18 +157,19 @@ class ApiService {
       final refreshToken = CacheManager.refreshToken;
 
       if (refreshToken == null || refreshToken.isEmpty) {
-        devPrint("No refresh token available");
+        devPrint('No refresh token available');
         return false;
       }
 
-      devPrint("Attempting token refresh...");
+      devPrint('Attempting token refresh...');
 
-      final baseUrl = kDebugMode ? ApiConstant.devBaseUrl : ApiConstant.baseUrl;
-      final refreshDio = Dio(BaseOptions(
-        baseUrl: baseUrl,
-        receiveTimeout: const Duration(seconds: 30),
-        connectTimeout: const Duration(seconds: 30),
-      ));
+      final refreshDio = Dio(
+        BaseOptions(
+          baseUrl: ApiConstant.activeBaseUrl,
+          receiveTimeout: const Duration(seconds: 30),
+          connectTimeout: const Duration(seconds: 30),
+        ),
+      );
 
       final response = await refreshDio.get(
         ApiConstant.refreshTokenUri,
@@ -186,7 +184,7 @@ class ApiService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = response.data;
         if (responseData == null) {
-          devPrint("Token refresh failed: null response data");
+          devPrint('Token refresh failed: null response data');
           return false;
         }
 
@@ -197,11 +195,11 @@ class ApiService {
 
         if (newAccessToken != null && newAccessToken.isNotEmpty) {
           await CacheManager.setToken(newAccessToken);
-          devPrint("Access token refreshed successfully");
+          devPrint('Access token refreshed successfully');
         }
         if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
           await CacheManager.setRefreshToken(newRefreshToken);
-          devPrint("Refresh token updated successfully");
+          devPrint('Refresh token updated successfully');
         }
 
         if (newAccessToken != null && newAccessToken.isNotEmpty) {
@@ -209,17 +207,19 @@ class ApiService {
         }
       }
 
-      devPrint("Token refresh failed: unexpected response (status: ${response.statusCode})");
+      devPrint(
+        'Token refresh failed: unexpected response (status: ${response.statusCode})',
+      );
       return false;
     } catch (e) {
-      devPrint("Token refresh failed: $e");
+      devPrint('Token refresh failed: $e');
       return false;
     }
   }
 
   /// Clears tokens and navigates to sign-in screen
   static Future<void> _handleSessionExpired() async {
-    devPrint("Session expired, clearing data and navigating to sign-in");
+    devPrint('Session expired, clearing data and navigating to sign-in');
     await CacheManager.removeToken();
     await CacheManager.removeRefreshToken();
     await CacheManager.removeUserData();
@@ -239,7 +239,7 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: "No internet connection",
+        title: 'No internet connection',
         description: 'Please check your internet connection',
       );
       return null;
@@ -255,9 +255,9 @@ class ApiService {
       );
       return response;
     } on DioException catch (e) {
-      errorHandle(e: e, requestMethod: "get = $endpoint");
-      devPrint("Get api error data = ${e.response}");
-      devPrint("Get api error data status code = ${e.response?.statusCode}");
+      errorHandle(e: e, requestMethod: 'get = $endpoint');
+      devPrint('Get api error data = ${e.response}');
+      devPrint('Get api error data status code = ${e.response?.statusCode}');
     }
   }
 
@@ -267,7 +267,7 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: "No internet connection",
+        title: 'No internet connection',
         description: 'Please check your internet connection',
       );
       return null;
@@ -279,21 +279,25 @@ class ApiService {
       devPrint('ApiService.post: params type = ${params?.runtimeType}');
 
       response = await _dio.post(endpoint, data: params);
-      devPrint("ApiService.post: statusCode = ${response.statusCode}");
+      devPrint('ApiService.post: statusCode = ${response.statusCode}');
 
       return response;
     } on DioException catch (e) {
-      errorHandle(e: e, requestMethod: "post = $endpoint");
-      devPrint("check response Repo api service e = $e");
+      errorHandle(e: e, requestMethod: 'post = $endpoint');
+      devPrint('check response Repo api service e = $e');
       devPrint(
-        "check response Repo api service status code = ${e.response?.statusCode}",
+        'check response Repo api service status code = ${e.response?.statusCode}',
       );
-      devPrint("check response Repo api service e.message = ${e.response?.data}");
+      devPrint(
+        'check response Repo api service e.message = ${e.response?.data}',
+      );
       // if (e.response?.statusCode == null) {
       //  Get.offAllNamed(AppRoutes.SigninScreen);
       // }
 
-      devPrint("check response Repo api service = ${e.response?.data['error']}");
+      devPrint(
+        "check response Repo api service = ${e.response?.data['error']}",
+      );
       return e.response;
     }
   }
@@ -304,7 +308,7 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: "No internet connection",
+        title: 'No internet connection',
         description: 'Please check your internet connection',
       );
       return null;
@@ -314,8 +318,10 @@ class ApiService {
       response = await _dio.patch(endpoint, data: params);
       return response;
     } on DioException catch (e) {
-      errorHandle(e: e, requestMethod: "patch = $endpoint");
-      devPrint("check response Repo api service patch method  = ${e.response?.data['error']}");
+      errorHandle(e: e, requestMethod: 'patch = $endpoint');
+      devPrint(
+        "check response Repo api service patch method  = ${e.response?.data['error']}",
+      );
     }
   }
 
@@ -325,7 +331,7 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: "No internet connection",
+        title: 'No internet connection',
         description: 'Please check your internet connection',
       );
       return null;
@@ -335,8 +341,10 @@ class ApiService {
       response = await _dio.put(endpoint, data: params);
       return response;
     } on DioException catch (e) {
-      errorHandle(e: e, requestMethod: "put = $endpoint");
-      devPrint("check response Repo api service = ${e.response?.data['error']}");
+      errorHandle(e: e, requestMethod: 'put = $endpoint');
+      devPrint(
+        "check response Repo api service = ${e.response?.data['error']}",
+      );
     }
   }
 
@@ -346,7 +354,7 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: "No internet connection",
+        title: 'No internet connection',
         description: 'Please check your internet connection',
       );
       return null;
@@ -356,11 +364,13 @@ class ApiService {
       response = await _dio.delete(endpoint, data: params);
       return response;
     } on DioException catch (e) {
-      errorHandle(e: e, requestMethod: "delete= $endpoint");
-      devPrint("check response Repo api service = $e");
-      devPrint("check response Repo api service = ${e.response?.statusCode}");
-      devPrint("check response Repo api service = ${e.message}");
-      devPrint("check response Repo api service = ${e.response?.data['error']}");
+      errorHandle(e: e, requestMethod: 'delete= $endpoint');
+      devPrint('check response Repo api service = $e');
+      devPrint('check response Repo api service = ${e.response?.statusCode}');
+      devPrint('check response Repo api service = ${e.message}');
+      devPrint(
+        "check response Repo api service = ${e.response?.data['error']}",
+      );
     }
   }
 
@@ -375,29 +385,29 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: "No internet connection",
+        title: 'No internet connection',
         description: 'Please check your internet connection',
       );
       return null;
     }
-    var formData = res.FormData.fromMap(body);
+    final formData = res.FormData.fromMap(body);
 
     for (var entry in files.entries) {
       // Validate file path before attempting to create multipart file
       if (entry.value.path.isEmpty) {
-        devPrint("⚠️ Skipping file with empty path: ${entry.key}");
+        devPrint('⚠️ Skipping file with empty path: ${entry.key}');
         continue;
       }
 
       // Check if file exists
       if (!await entry.value.exists()) {
-        devPrint("⚠️ Skipping non-existent file: ${entry.value.path}");
+        devPrint('⚠️ Skipping non-existent file: ${entry.value.path}');
         continue;
       }
 
       try {
         final filePath = entry.value.path;
-        final fileName = filePath.split("/").last;
+        final fileName = filePath.split('/').last;
         final ext = fileName.split('.').last.toLowerCase();
         final mimeType = switch (ext) {
           'jpg' || 'jpeg' => 'image/jpeg',
@@ -418,7 +428,7 @@ class ApiService {
           ),
         );
       } catch (e) {
-        devPrint("❌ Error processing file ${entry.value.path}: $e");
+        devPrint('❌ Error processing file ${entry.value.path}: $e');
         continue;
       }
     }
@@ -428,7 +438,7 @@ class ApiService {
       // Return the full response to match other API methods
       return response;
     } on DioException catch (e) {
-      errorHandle(e: e, requestMethod: "POST $path");
+      errorHandle(e: e, requestMethod: 'POST $path');
       // Return the error response (if available) for upstream handling, similar to post()
       return e.response;
     }
@@ -436,8 +446,8 @@ class ApiService {
 
   /// Upload files with support for multiple files with the same key
   /// filesMap can contain:
-  /// - File: single file with the key
-  /// - List<File>: multiple files all with the same key
+  /// - `File`: single file with the key
+  /// - `List<File>`: multiple files all with the same key
   Future<dynamic> multipleFileUploadWithList(
     String path,
     Map<String, dynamic> body, {
@@ -448,12 +458,12 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: "No internet connection",
+        title: 'No internet connection',
         description: 'Please check your internet connection',
       );
       return null;
     }
-    var formData = res.FormData.fromMap(body);
+    final formData = res.FormData.fromMap(body);
 
     for (var entry in filesMap.entries) {
       final key = entry.key;
@@ -462,7 +472,7 @@ class ApiService {
       if (value is File) {
         // Single file
         if (value.path.isEmpty || !await value.exists()) {
-          devPrint("⚠️ Skipping non-existent file: ${value.path}");
+          devPrint('⚠️ Skipping non-existent file: ${value.path}');
           continue;
         }
         try {
@@ -471,18 +481,18 @@ class ApiService {
               key,
               await res.MultipartFile.fromFile(
                 value.path,
-                filename: value.path.split("/").last,
+                filename: value.path.split('/').last,
               ),
             ),
           );
         } catch (e) {
-          devPrint("❌ Error processing file ${value.path}: $e");
+          devPrint('❌ Error processing file ${value.path}: $e');
         }
       } else if (value is List<File>) {
         // Multiple files with same key
         for (final file in value) {
           if (file.path.isEmpty || !await file.exists()) {
-            devPrint("⚠️ Skipping non-existent file: ${file.path}");
+            devPrint('⚠️ Skipping non-existent file: ${file.path}');
             continue;
           }
           try {
@@ -491,12 +501,12 @@ class ApiService {
                 key,
                 await res.MultipartFile.fromFile(
                   file.path,
-                  filename: file.path.split("/").last,
+                  filename: file.path.split('/').last,
                 ),
               ),
             );
           } catch (e) {
-            devPrint("❌ Error processing file ${file.path}: $e");
+            devPrint('❌ Error processing file ${file.path}: $e');
           }
         }
       }
@@ -506,7 +516,7 @@ class ApiService {
       final response = await _dio.post(path, data: formData);
       return response;
     } on DioException catch (e) {
-      errorHandle(e: e, requestMethod: "POST $path");
+      errorHandle(e: e, requestMethod: 'POST $path');
       return e.response;
     }
   }
@@ -522,29 +532,29 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: "No internet connection",
+        title: 'No internet connection',
         description: 'Please check your internet connection',
       );
       return null;
     }
-    var formData = res.FormData.fromMap(body);
+    final formData = res.FormData.fromMap(body);
 
     for (var entry in files.entries) {
       // Validate file path before attempting to create multipart file
       if (entry.value.path.isEmpty) {
-        devPrint("⚠️ Skipping file with empty path: ${entry.key}");
+        devPrint('⚠️ Skipping file with empty path: ${entry.key}');
         continue;
       }
 
       // Check if file exists
       if (!await entry.value.exists()) {
-        devPrint("⚠️ Skipping non-existent file: ${entry.value.path}");
+        devPrint('⚠️ Skipping non-existent file: ${entry.value.path}');
         continue;
       }
 
       try {
         final filePath = entry.value.path;
-        final fileName = filePath.split("/").last;
+        final fileName = filePath.split('/').last;
         final ext = fileName.split('.').last.toLowerCase();
         final mimeType = switch (ext) {
           'jpg' || 'jpeg' => 'image/jpeg',
@@ -565,7 +575,7 @@ class ApiService {
           ),
         );
       } catch (e) {
-        devPrint("❌ Error processing file ${entry.value.path}: $e");
+        devPrint('❌ Error processing file ${entry.value.path}: $e');
         continue;
       }
     }
@@ -575,7 +585,7 @@ class ApiService {
       // Return the full response to match other API methods
       return response;
     } on DioException catch (e) {
-      errorHandle(e: e, requestMethod: "POST $path");
+      errorHandle(e: e, requestMethod: 'POST $path');
       // Return the error response (if available) for upstream handling, similar to post()
       return e.response;
     }
@@ -592,29 +602,29 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: "No internet connection",
+        title: 'No internet connection',
         description: 'Please check your internet connection',
       );
       return null;
     }
-    var formData = res.FormData.fromMap(body);
+    final formData = res.FormData.fromMap(body);
 
     for (var entry in files.entries) {
       // Validate file path before attempting to create multipart file
       if (entry.value.path.isEmpty) {
-        devPrint("⚠️ Skipping file with empty path: ${entry.key}");
+        devPrint('⚠️ Skipping file with empty path: ${entry.key}');
         continue;
       }
 
       // Check if file exists
       if (!await entry.value.exists()) {
-        devPrint("⚠️ Skipping non-existent file: ${entry.value.path}");
+        devPrint('⚠️ Skipping non-existent file: ${entry.value.path}');
         continue;
       }
 
       try {
         final filePath = entry.value.path;
-        final fileName = filePath.split("/").last;
+        final fileName = filePath.split('/').last;
         final ext = fileName.split('.').last.toLowerCase();
         final mimeType = switch (ext) {
           'jpg' || 'jpeg' => 'image/jpeg',
@@ -635,7 +645,7 @@ class ApiService {
           ),
         );
       } catch (e) {
-        devPrint("❌ Error processing file ${entry.value.path}: $e");
+        devPrint('❌ Error processing file ${entry.value.path}: $e');
         continue;
       }
     }
@@ -645,7 +655,7 @@ class ApiService {
       // Return the full response to match other API methods
       return response;
     } on DioException catch (e) {
-      errorHandle(e: e, requestMethod: "PATCH $path");
+      errorHandle(e: e, requestMethod: 'PATCH $path');
       // Return the error response (if available) for upstream handling, similar to post()
       return e.response;
     }
@@ -661,12 +671,12 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: "No internet connection",
+        title: 'No internet connection',
         description: 'Please check your internet connection',
       );
       return null;
     }
-    var formData = res.FormData.fromMap(body);
+    final formData = res.FormData.fromMap(body);
 
     for (var entry in filesMap.entries) {
       final key = entry.key;
@@ -675,7 +685,7 @@ class ApiService {
       if (value is File) {
         // Single file
         if (value.path.isEmpty || !await value.exists()) {
-          devPrint("⚠️ Skipping non-existent file: ${value.path}");
+          devPrint('⚠️ Skipping non-existent file: ${value.path}');
           continue;
         }
         try {
@@ -684,18 +694,18 @@ class ApiService {
               key,
               await res.MultipartFile.fromFile(
                 value.path,
-                filename: value.path.split("/").last,
+                filename: value.path.split('/').last,
               ),
             ),
           );
         } catch (e) {
-          devPrint("❌ Error processing file ${value.path}: $e");
+          devPrint('❌ Error processing file ${value.path}: $e');
         }
       } else if (value is List<File>) {
         // Multiple files with same key
         for (final file in value) {
           if (file.path.isEmpty || !await file.exists()) {
-            devPrint("⚠️ Skipping non-existent file: ${file.path}");
+            devPrint('⚠️ Skipping non-existent file: ${file.path}');
             continue;
           }
           try {
@@ -704,12 +714,12 @@ class ApiService {
                 key,
                 await res.MultipartFile.fromFile(
                   file.path,
-                  filename: file.path.split("/").last,
+                  filename: file.path.split('/').last,
                 ),
               ),
             );
           } catch (e) {
-            devPrint("❌ Error processing file ${file.path}: $e");
+            devPrint('❌ Error processing file ${file.path}: $e');
           }
         }
       }
@@ -719,63 +729,61 @@ class ApiService {
       final response = await _dio.patch(path, data: formData);
       return response;
     } on DioException catch (e) {
-      errorHandle(e: e, requestMethod: "PATCH $path");
+      errorHandle(e: e, requestMethod: 'PATCH $path');
       return e.response;
     }
   }
-
-
 }
 
-errorHandle({
+void errorHandle({
   required DioException e,
   required String requestMethod,
   BuildContext? context,
-}) async {
-  devPrint(" Api Request Method: $requestMethod");
-  devPrint(" Api Request Method: ${e.type}");
+}) {
+  devPrint(' Api Request Method: $requestMethod');
+  devPrint(' Api Request Method: ${e.type}');
 
   switch (e.type) {
     case DioExceptionType.connectionTimeout:
-      devPrint("DioErrorType.connectTimeout");
+      devPrint('DioErrorType.connectTimeout');
       break;
     case DioExceptionType.sendTimeout:
-      devPrint("DioErrorType.sendTimeout");
+      devPrint('DioErrorType.sendTimeout');
       break;
     case DioExceptionType.receiveTimeout:
-      devPrint("DioErrorType.receiveTimeout");
+      devPrint('DioErrorType.receiveTimeout');
       break;
     case DioExceptionType.cancel:
-      devPrint("DioErrorType.cancel");
+      devPrint('DioErrorType.cancel');
       break;
     case DioExceptionType.connectionError:
-      devPrint("DioErrorType.connectionError");
+      devPrint('DioErrorType.connectionError');
       break;
     case DioExceptionType.unknown:
-      devPrint("DioErrorType.other");
+      devPrint('DioErrorType.other');
       break;
     case DioExceptionType.badCertificate:
-      devPrint("DioErrorType.badCertificate");
+      devPrint('DioErrorType.badCertificate');
       // TODO: Handle this case.
       break;
     case DioExceptionType.badResponse:
       // 401/403 is already handled by the refresh interceptor, which signs the
       // user out via _handleSessionExpired once a refresh fails.
-      devPrint("DioErrorType.badResponse ${e.response?.statusCode}");
+      devPrint('DioErrorType.badResponse ${e.response?.statusCode}');
       break;
     default:
       // covers future DioExceptionType values (e.g. transformTimeout)
-      devPrint("DioErrorType unhandled: ${e.type}");
+      devPrint('DioErrorType unhandled: ${e.type}');
       break;
   }
 }
 
-
 Future<bool> checkInternet() async {
-  final result = await Connectivity().checkConnectivity();
+  // connectivity_plus v7 returns a List — comparing it to a bare enum is always
+  // false, which silently disabled this guard.
+  final results = await Connectivity().checkConnectivity();
 
-  // Not connected to any network at all
-  if (result == ConnectivityResult.none) {
+  if (results.isEmpty || results.every((r) => r == ConnectivityResult.none)) {
     return false;
   }
 
@@ -793,7 +801,7 @@ Future<bool> checkInternet() async {
 }
 
 String formatValidationMessages(Map<String, dynamic> messages) {
-  StringBuffer formattedMessages = StringBuffer();
+  final StringBuffer formattedMessages = StringBuffer();
 
   messages.forEach((key, value) {
     if (value is String) {
@@ -813,7 +821,7 @@ SnackbarController showErrorSnackbar({required String message}) {
     GetSnackBar(
       title: 'Error',
       message: message,
-      icon: Icon(Icons.error, color: CustomColors.white()),
+      icon: Icon(LucideIcons.circleAlert, color: CustomColors.white()),
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: CustomColors.primary(),
 

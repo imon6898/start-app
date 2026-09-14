@@ -1,15 +1,14 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_starter/app/feature/auth/auth_controllers/verify_otp_controller.dart';
+import 'package:flutter_starter/app/services/domain/dev_tools.dart';
 import 'package:flutter_starter/app/utils/constants/app_colors.dart';
 import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
 import 'package:flutter_starter/app/utils/responsive_utils.dart';
 import 'package:flutter_starter/app/utils/validator.dart';
 import 'package:flutter_starter/app/widgets/appbar_widgets/appbar_widget.dart';
-import 'package:flutter_starter/app/widgets/custom_primary_button.dart';
-import 'package:flutter_starter/app/widgets/custom_snack_bar.dart';
+import 'package:flutter_starter/app/widgets/buttons/custom_primary_button.dart';
+import 'package:flutter_starter/app/widgets/feedback/custom_snack_bar.dart';
 import 'package:pinput/pinput.dart';
 
 class VerifyOtpScreen extends StatelessWidget {
@@ -21,7 +20,7 @@ class VerifyOtpScreen extends StatelessWidget {
       builder: (c) {
         return Scaffold(
           backgroundColor: CustomColors.BGColor(),
-          appBar: AppBarWidget(title: "Verification".tr),
+          appBar: AppBarWidget(title: 'Verification'.tr),
           body: _body(context, c),
           bottomSheet: Padding(
             padding: EdgeInsets.only(
@@ -33,20 +32,20 @@ class VerifyOtpScreen extends StatelessWidget {
               width: double.infinity,
               height: R.h(44),
               child: CustomButton(
-                text: "Continue".tr,
+                text: 'Continue'.tr,
                 loading: c.isLoadingVerifyOtp.value,
                 onPressed: () {
                   if (c.verifyOtpFormKey.currentState?.validate() == true) {
                     final arguments = Get.arguments;
-                    String fromPage = "";
+                    String fromPage = '';
 
                     if (arguments is Map<String, dynamic>) {
-                      fromPage = arguments['fromPage'] ?? "";
+                      fromPage = arguments['fromPage'] ?? '';
                     } else if (arguments is List && arguments.isNotEmpty) {
-                      fromPage = arguments[0]?.toString() ?? "";
+                      fromPage = arguments[0]?.toString() ?? '';
                     }
 
-                    print("fromPage in VerifyOtpScreen: $fromPage");
+                    devPrint('fromPage in VerifyOtpScreen: $fromPage');
 
                     c.verifyOtp(fromPage: fromPage);
                   }
@@ -62,13 +61,13 @@ class VerifyOtpScreen extends StatelessWidget {
   Widget _body(BuildContext context, VerifyOtpController controller) {
     // Get email from arguments - handle both List and Map types
     final arguments = Get.arguments;
-    String email = "";
+    String email = '';
 
     if (arguments is List<String> && arguments.length > 1) {
       email = arguments[1];
     } else if (arguments is Map<String, dynamic> &&
         arguments.containsKey('email')) {
-      email = arguments['email'] ?? "";
+      email = arguments['email'] ?? '';
     }
 
     return Container(
@@ -78,7 +77,7 @@ class VerifyOtpScreen extends StatelessWidget {
         children: [
           SizedBox(height: R.h(44)),
           Text(
-            "We’ve the code send to your email".tr,
+            'We’ve the code send to your email'.tr,
             style: CustomTextStyles.medium16.copyWith(
               color: CustomColors.textGray(),
             ),
@@ -122,15 +121,15 @@ class VerifyOtpScreen extends StatelessWidget {
           onCompleted: (data) {
             if (controller.verifyOtpFormKey.currentState?.validate() == true) {
               final arguments = Get.arguments;
-              String fromPage = "";
+              String fromPage = '';
 
               if (arguments is Map<String, dynamic>) {
-                fromPage = arguments['fromPage'] ?? "";
+                fromPage = arguments['fromPage'] ?? '';
               } else if (arguments is List && arguments.isNotEmpty) {
-                fromPage = arguments[0]?.toString() ?? "";
+                fromPage = arguments[0]?.toString() ?? '';
               }
 
-              print("fromPage in VerifyOtpScreen: $fromPage");
+              devPrint('fromPage in VerifyOtpScreen: $fromPage');
 
               controller.verifyOtp(fromPage: fromPage);
             }
@@ -197,70 +196,65 @@ class VerifyOtpScreen extends StatelessWidget {
     String email,
   ) {
     return Obx(
-      () => Container(
-        //: EdgeInsets.only(top: 10.h),
-        child: Column(
-          children: [
-            SizedBox(height: R.h(20)),
-            // Timer display
-            Text(
-              controller.formattedTime,
-              style: CustomTextStyles.semiBold16.copyWith(
-                color:
-                    controller.countdownTime.value > 0
-                        ? CustomColors.primary()
-                        : CustomColors.textGray(),
+      () => Column(
+        children: [
+          SizedBox(height: R.h(20)),
+          // Timer display
+          Text(
+            controller.formattedTime,
+            style: CustomTextStyles.semiBold16.copyWith(
+              color: controller.countdownTime.value > 0
+                  ? CustomColors.primary()
+                  : CustomColors.textGray(),
+            ),
+          ),
+          SizedBox(height: R.h(8)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Didn’t receive code? '.tr,
+                style: CustomTextStyles.medium16.copyWith(
+                  color: CustomColors.textGray(),
+                ),
               ),
-            ),
-            SizedBox(height: R.h(8)),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "Didn’t receive code? ".tr,
-                  style: CustomTextStyles.medium16.copyWith(
-                    color: CustomColors.textGray(),
-                  ),
-                ),
-                SizedBox(width: R.w(4)),
-                GestureDetector(
-                  onTap: () {
-                    controller.verifyOtpFormKey.currentState?.validate();
-                    if (controller.canResend.value) {
-                      log("Resend Code");
-                      FocusScope.of(context).unfocus();
-                      showCustomSnackBar(
-                        context: context,
-                        type: SnackBarType.Success,
-                        title: "Resend Code".tr,
-                        description: "Resend code success".tr,
-                      );
-                      controller.resendOtp(context, email);
-                    } else {
-                      // Show warning if timer is still running
+              SizedBox(width: R.w(4)),
+              GestureDetector(
+                onTap: () {
+                  controller.verifyOtpFormKey.currentState?.validate();
+                  if (controller.canResend.value) {
+                    devPrint('Resend Code');
+                    FocusScope.of(context).unfocus();
+                    showCustomSnackBar(
+                      context: context,
+                      type: SnackBarType.Success,
+                      title: 'Resend Code'.tr,
+                      description: 'Resend code success'.tr,
+                    );
+                    controller.resendOtp(context, email);
+                  } else {
+                    // Show warning if timer is still running
 
-                      showCustomSnackBar(
-                        context: context,
-                        type: SnackBarType.Warning,
-                        title: "Please wait".tr,
-                        description: "Wait for timer complete".tr,
-                      );
-                    }
-                  },
-                  child: Text(
-                    "Resend Code".tr,
-                    style: CustomTextStyles.medium16.copyWith(
-                      color:
-                          controller.canResend.value
-                              ? CustomColors.primary()
-                              : CustomColors.textGray().withOpacity(0.5),
-                    ),
+                    showCustomSnackBar(
+                      context: context,
+                      type: SnackBarType.Warning,
+                      title: 'Please wait'.tr,
+                      description: 'Wait for timer complete'.tr,
+                    );
+                  }
+                },
+                child: Text(
+                  'Resend Code'.tr,
+                  style: CustomTextStyles.medium16.copyWith(
+                    color: controller.canResend.value
+                        ? CustomColors.primary()
+                        : CustomColors.textGray().withValues(alpha: 0.5),
                   ),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_starter/app/core/models/country.dart';
 import 'package:flutter_starter/app/feature/auth/auth_controllers/sent_otp_controller.dart';
 import 'package:flutter_starter/app/utils/constants/app_colors.dart';
 import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
 import 'package:flutter_starter/app/utils/responsive_utils.dart';
 import 'package:flutter_starter/app/utils/validator.dart';
 import 'package:flutter_starter/app/widgets/appbar_widgets/appbar_widget.dart';
-import 'package:flutter_starter/app/widgets/custom_phone_text_field.dart';
-import 'package:flutter_starter/app/widgets/custom_primary_button.dart';
-import 'package:flutter_starter/app/widgets/custom_text_field.dart';
+import 'package:flutter_starter/app/widgets/inputs/custom_phone_text_field.dart';
+import 'package:flutter_starter/app/widgets/buttons/custom_primary_button.dart';
+import 'package:flutter_starter/app/widgets/inputs/custom_text_field.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class SentOtpScreen extends StatelessWidget {
   const SentOtpScreen({super.key});
@@ -19,7 +21,7 @@ class SentOtpScreen extends StatelessWidget {
       builder: (c) {
         return Scaffold(
           backgroundColor: CustomColors.BGColor(),
-          appBar: AppBarWidget(title: "Forgot Password".tr),
+          appBar: AppBarWidget(title: 'Forgot Password'.tr),
           body: _body(context, c),
           bottomSheet: Padding(
             padding: EdgeInsets.only(
@@ -46,7 +48,7 @@ class SentOtpScreen extends StatelessWidget {
             SizedBox(height: R.h(44)),
 
             Text(
-              "Enter the email address or phone number associated with your account."
+              'Enter the email address or phone number associated with your account.'
                   .tr,
               style: CustomTextStyles.regular14.copyWith(
                 color: CustomColors.paragraph(),
@@ -57,11 +59,39 @@ class SentOtpScreen extends StatelessWidget {
 
             buildInputField(context, controller),
 
-            // Spacer(),
-            // buildSigninButton(context, controller),
             SizedBox(height: R.h(20)),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Radio-style option that switches the form between email and phone entry.
+  Widget buildTypeOption(
+    SentOtpController controller,
+    String type,
+    String label,
+  ) {
+    final selected = controller.sentOtpType == type;
+    return GestureDetector(
+      onTap: () {
+        controller.sentOtpType = type;
+        controller.update();
+      },
+      child: Row(
+        children: [
+          Icon(
+            selected ? LucideIcons.circleDot : LucideIcons.circle,
+            color: selected ? CustomColors.primary() : CustomColors.lightGrey(),
+          ),
+          SizedBox(width: R.w(8)),
+          Text(
+            label,
+            style: CustomTextStyles.regular14.copyWith(
+              color: CustomColors.black(),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -72,86 +102,35 @@ class SentOtpScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Email or Phone selector with radio icons
           Row(
             children: [
-              GestureDetector(
-                onTap: () {
-                  controller.sentOtpType = "email";
-                  controller.update();
-                },
-                child: Row(
-                  children: [
-                    Icon(
-                      controller.sentOtpType == "email"
-                          ? Icons.radio_button_checked
-                          : Icons.radio_button_unchecked,
-                      color:
-                          controller.sentOtpType == "email"
-                              ? CustomColors.primary()
-                              : Colors.grey,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      "Email".tr,
-                      //"common_email".tr +" "+"common_or".tr,
-                      style: CustomTextStyles.regular14.copyWith(
-                        color: CustomColors.black(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              // GestureDetector(
-              //   onTap: () {
-              //     controller.sentOtpType = "phone";
-              //     controller.update();
-              //   },
-              //   child: Row(
-              //     children: [
-              //       Icon(
-              //         controller.sentOtpType == "phone"
-              //             ? Icons.radio_button_checked
-              //             : Icons.radio_button_unchecked,
-              //         color: controller.sentOtpType == "phone"
-              //             ? CustomColors.primary()
-              //             : Colors.grey,
-              //       ),
-              //       const SizedBox(width: 8),
-              //       Text(
-              //         "common_phone".tr,
-              //         style: CustomTextStyles.regular14.copyWith(
-              //           color: CustomColors.black(),
-              //         ),
-              //       ),
-              //     ],
-              //   ),
-              // ),
+              buildTypeOption(controller, 'email', 'Email'.tr),
+              SizedBox(width: R.w(20)),
+              buildTypeOption(controller, 'phone', 'Phone'.tr),
             ],
           ),
 
-          const SizedBox(height: 16),
+          SizedBox(height: R.h(16)),
 
-          // Conditionally show email or phone input
-          if (controller.sentOtpType == "email") ...[
+          if (controller.sentOtpType == 'email') ...[
             CustomTextField(
               controller: controller.sentOtpController,
-              hintText: "Enter email address".tr,
+              hintText: 'Enter email address'.tr,
               inputType: TextInputType.emailAddress,
               validator: Validators.emailValidator.call,
             ),
           ] else ...[
             CustomPhoneTextField(
               controller: controller.mobileNumberCtr,
-              hintText: "enter_phone_number".tr,
+              hintText: 'Enter phone number'.tr,
               validator: Validators.phoneValidatorFor(
                 countryCode: controller.selectedCountry?.code,
               ),
               onCountryChanged: (Country country) {
                 controller.updateSelectedCountry(country);
               },
-              initialCountry: controller.selectedCountry ??
+              initialCountry:
+                  controller.selectedCountry ??
                   CountryData.fromDeviceLocale() ??
                   CountryData.fromIpCached() ??
                   CountryData.getDefaultCountry(),
@@ -171,7 +150,7 @@ class SentOtpScreen extends StatelessWidget {
       height: R.h(44),
       child: CustomButton(
         loading: controller.isLoadingSentOtp.value,
-        text: "Continue".tr,
+        text: 'Continue'.tr,
         textStyle: CustomTextStyles.medium16.copyWith(
           color: CustomColors.white(),
         ),

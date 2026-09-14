@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:flutter_starter/app/core/models/country.dart';
 import 'package:flutter_starter/app/feature/auth/auth_controllers/signup_controller.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter_starter/app/utils/constants/app_colors.dart';
@@ -8,10 +9,10 @@ import 'package:flutter_starter/app/utils/platform_utils.dart';
 import 'package:flutter_starter/app/utils/responsive_utils.dart';
 import 'package:flutter_starter/app/utils/validator.dart';
 import 'package:flutter_starter/app/widgets/appbar_widgets/appbar_widget.dart';
-import 'package:flutter_starter/app/widgets/custom_phone_text_field.dart';
-import 'package:flutter_starter/app/widgets/custom_primary_button.dart';
-import 'package:flutter_starter/app/widgets/custom_snack_bar.dart';
-import 'package:flutter_starter/app/widgets/custom_text_field.dart';
+import 'package:flutter_starter/app/widgets/inputs/custom_phone_text_field.dart';
+import 'package:flutter_starter/app/widgets/buttons/custom_primary_button.dart';
+import 'package:flutter_starter/app/widgets/feedback/custom_snack_bar.dart';
+import 'package:flutter_starter/app/widgets/inputs/custom_text_field.dart';
 
 class SignupScreen extends StatelessWidget {
   const SignupScreen({super.key});
@@ -22,7 +23,7 @@ class SignupScreen extends StatelessWidget {
       builder: (c) {
         return Scaffold(
           backgroundColor: CustomColors.BGColor(),
-          appBar: AppBarWidget(title: "Create new account"),
+          appBar: AppBarWidget(title: 'Create new account'),
           body: _body(context, c),
         );
       },
@@ -76,8 +77,8 @@ class SignupScreen extends StatelessWidget {
                 flex: 5,
                 child: CustomTextField(
                   controller: controller.firstNameCtr,
-                  textHeading: "First name",
-                  hintText: "Enter first name",
+                  textHeading: 'First name',
+                  hintText: 'Enter first name',
                   required: true,
                   inputType: TextInputType.name,
                   validator: Validators.nameValidator.call,
@@ -88,8 +89,8 @@ class SignupScreen extends StatelessWidget {
                 flex: 5,
                 child: CustomTextField(
                   controller: controller.lastNameCtr,
-                  textHeading: "Last name",
-                  hintText: "Enter last name",
+                  textHeading: 'Last name',
+                  hintText: 'Enter last name',
                   required: true,
                   inputType: TextInputType.name,
                   validator: Validators.nameValidator.call,
@@ -99,16 +100,16 @@ class SignupScreen extends StatelessWidget {
           ),
           CustomTextField(
             controller: controller.emailRegCtr,
-            textHeading: "Email",
-            hintText: "Enter email",
+            textHeading: 'Email',
+            hintText: 'Enter email',
             required: true,
             inputType: TextInputType.emailAddress,
             validator: Validators.emailValidator.call,
           ),
           CustomPhoneTextField(
             controller: controller.mobileNumberCtr,
-            textHeading: "Phone",
-            hintText: "Enter phone number",
+            textHeading: 'Phone',
+            hintText: 'Enter phone number',
             required: true,
             validator: Validators.phoneValidatorFor(
               countryCode: controller.selectedCountry?.code,
@@ -116,7 +117,8 @@ class SignupScreen extends StatelessWidget {
             onCountryChanged: (Country country) {
               controller.updateSelectedCountry(country);
             },
-            initialCountry: controller.selectedCountry ??
+            initialCountry:
+                controller.selectedCountry ??
                 CountryData.fromDeviceLocale() ??
                 CountryData.fromIpCached() ??
                 CountryData.getDefaultCountry(),
@@ -126,8 +128,8 @@ class SignupScreen extends StatelessWidget {
 
           CustomTextField(
             controller: controller.passwordRegCtr,
-            textHeading: "Password",
-            hintText: "Enter password",
+            textHeading: 'Password',
+            hintText: 'Enter password',
             isPassword: true,
             required: true,
             inputType: TextInputType.visiblePassword,
@@ -135,8 +137,8 @@ class SignupScreen extends StatelessWidget {
           ),
           CustomTextField(
             controller: controller.confirmPasswordRegCtr,
-            textHeading: "Confirm password",
-            hintText: "Enter confirm password",
+            textHeading: 'Confirm password',
+            hintText: 'Enter confirm password',
             isPassword: true,
             required: true,
             inputType: TextInputType.visiblePassword,
@@ -162,12 +164,11 @@ class SignupScreen extends StatelessWidget {
             padding: EdgeInsets.only(top: R.h(2), right: R.w(8)),
             child: Icon(
               controller.isAccept.value
-                  ? Icons.check_box
-                  : Icons.check_box_outline_blank,
-              color:
-                  controller.isAccept.value
-                      ? CustomColors.primary()
-                      : CustomColors.whiteStroke(),
+                  ? LucideIcons.squareCheck
+                  : LucideIcons.square,
+              color: controller.isAccept.value
+                  ? CustomColors.primary()
+                  : CustomColors.whiteStroke(),
               size: R.sp(25),
             ),
           ),
@@ -183,7 +184,7 @@ class SignupScreen extends StatelessWidget {
                       controller.toggleAcceptTerms();
                     },
                     child: Text(
-                      "I Agree to yaad".tr,
+                      'I agree to the'.tr,
                       style: CustomTextStyles.medium14.copyWith(
                         color: CustomColors.paragraph(),
                       ),
@@ -191,7 +192,7 @@ class SignupScreen extends StatelessWidget {
                   ),
                 ),
                 TextSpan(
-                  text: " ",
+                  text: ' ',
                   style: CustomTextStyles.medium14.copyWith(
                     color: CustomColors.paragraph(),
                   ),
@@ -204,7 +205,7 @@ class SignupScreen extends StatelessWidget {
                       //Get.toNamed(AppRoutes.TermsOfServiceScreen);
                     },
                     child: Text(
-                      "Terms".tr,
+                      'Terms'.tr,
                       style: CustomTextStyles.medium14.copyWith(
                         color: CustomColors.paragraph(),
                       ),
@@ -212,7 +213,7 @@ class SignupScreen extends StatelessWidget {
                   ),
                 ),
                 TextSpan(
-                  text: " & ",
+                  text: ' & ',
                   style: CustomTextStyles.medium14.copyWith(
                     color: CustomColors.paragraph(),
                   ),
@@ -224,7 +225,7 @@ class SignupScreen extends StatelessWidget {
                       //Get.toNamed(AppRoutes.PrivacyPolicyScreen);
                     },
                     child: Text(
-                      "Privacy Policy".tr,
+                      'Privacy Policy'.tr,
                       style: CustomTextStyles.medium14.copyWith(
                         color: CustomColors.paragraph(),
                       ),
@@ -244,11 +245,10 @@ class SignupScreen extends StatelessWidget {
       width: double.infinity,
       height: R.h(44),
       child: CustomButton(
-        text: "Create Account".tr,
-        backgroundColor:
-            controller.isAccept.value
-                ? CustomColors.primary()
-                : CustomColors.textGray(),
+        text: 'Create Account'.tr,
+        backgroundColor: controller.isAccept.value
+            ? CustomColors.primary()
+            : CustomColors.textGray(),
         loading: controller.isLoadingCreateNewAccount.value,
         textStyle: CustomTextStyles.medium16.copyWith(
           color: CustomColors.white(),
@@ -267,7 +267,7 @@ class SignupScreen extends StatelessWidget {
             }
             FocusScope.of(context).unfocus();
             // Form is already validated, proceed with registration
-            controller.createNewAccount(fromPage: "fromCreateAccount");
+            controller.createNewAccount(fromPage: 'fromCreateAccount');
           }
         },
       ),
@@ -283,7 +283,7 @@ class SignupScreen extends StatelessWidget {
         Padding(
           padding: EdgeInsets.symmetric(horizontal: R.w(10)),
           child: Text(
-            "or".tr,
+            'or'.tr,
             style: CustomTextStyles.regular14.copyWith(
               color: CustomColors.paragraph(),
             ),
@@ -297,28 +297,27 @@ class SignupScreen extends StatelessWidget {
   }
 
   Widget buildGoogleSigninButton(
-      BuildContext context,
-      SignupController controller,
-      ) {
+    BuildContext context,
+    SignupController controller,
+  ) {
     return Obx(() {
       final isDisabled = controller.isLoadingSignIn.value;
-      return Container(
-        //padding: R.pad(horizontal: R.w(16)),
+      return SizedBox(
+        //padding: R.pad(horizontal: 16),
         width: double.infinity,
         height: R.h(44),
         child: Opacity(
           opacity: isDisabled ? 0.5 : 1.0,
           child: CustomOutlinedButton(
-            text: "Login with Google".tr,
+            text: 'Login with Google'.tr,
             textStyle: CustomTextStyles.medium12,
             loading: controller.isLoadingGoogleSignIn.value,
-            onPressed:
-            isDisabled
+            onPressed: isDisabled
                 ? () {}
                 : () {
-              FocusScope.of(context).unfocus();
-              controller.signInWithGoogle();
-            },
+                    FocusScope.of(context).unfocus();
+                    controller.signInWithGoogle();
+                  },
             // Placeholder glyph — drop in the official brand asset here.
             icon: Icon(
               LucideIcons.globe,
@@ -332,28 +331,27 @@ class SignupScreen extends StatelessWidget {
   }
 
   Widget buildAppleSigninButton(
-      BuildContext context,
-      SignupController controller,
-      ) {
+    BuildContext context,
+    SignupController controller,
+  ) {
     return Obx(() {
       final isDisabled = controller.isLoadingSignIn.value;
-      return Container(
-        //padding: R.pad(horizontal: R.w(16)),
+      return SizedBox(
+        //padding: R.pad(horizontal: 16),
         width: double.infinity,
         height: R.h(44),
         child: Opacity(
           opacity: isDisabled ? 0.5 : 1.0,
           child: CustomOutlinedButton(
-            text: "Login With Apple".tr,
+            text: 'Login With Apple'.tr,
             textStyle: CustomTextStyles.medium12,
             loading: controller.isLoadingAppleSignIn.value,
-            onPressed:
-            isDisabled
+            onPressed: isDisabled
                 ? () {}
                 : () {
-              FocusScope.of(context).unfocus();
-              controller.signInWithApple();
-            },
+                    FocusScope.of(context).unfocus();
+                    controller.signInWithApple();
+                  },
             // Placeholder glyph — drop in the official brand asset here.
             icon: Icon(
               LucideIcons.apple,
@@ -371,7 +369,7 @@ class SignupScreen extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          "Already have an account?",
+          'Already have an account?',
           style: CustomTextStyles.medium14.copyWith(
             color: CustomColors.textGray(),
           ),
@@ -383,7 +381,7 @@ class SignupScreen extends StatelessWidget {
             Get.back();
           },
           child: Text(
-            "Log in",
+            'Log in',
             style: CustomTextStyles.bold14.copyWith(
               color: CustomColors.primary(),
             ),

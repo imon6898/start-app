@@ -10,16 +10,17 @@ class MainUtils {
   }
 
   static String convertToTimeString(String time) {
-    DateTime parsedTime = DateFormat("HH:mm:ss").parse(time);
-    return DateFormat("hh:mm a")
-        .format(parsedTime); // Converts to 12-hour format with AM/PM
+    final DateTime parsedTime = DateFormat('HH:mm:ss').parse(time);
+    return DateFormat(
+      'hh:mm a',
+    ).format(parsedTime); // Converts to 12-hour format with AM/PM
   }
 
   static String formatDate(DateTime dateTime) {
     try {
       return DateFormat('yyyy-MM-dd hh:mm:ss a').format(dateTime);
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
@@ -27,7 +28,7 @@ class MainUtils {
     try {
       return DateFormat('hh:mm a').format(dateTime);
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
@@ -50,7 +51,7 @@ class MainUtils {
       return 'Yesterday';
     } else if (difference > 1 && difference <= 7) {
       // Get day of the week name
-      String dayName = DateFormat.EEEE().format(
+      final String dayName = DateFormat.EEEE().format(
         messageDate,
       ); // Monday, Tuesday, etc.
       return dayName;
@@ -90,7 +91,7 @@ class MainUtils {
     try {
       return DateFormat('HH:mm').format(dateTime);
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
@@ -122,7 +123,7 @@ class MainUtils {
       final timePart = DateFormat('hh:mm a').format(dateTime);
       return '$datePart at ${timePart.toLowerCase()}';
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
@@ -130,7 +131,7 @@ class MainUtils {
     try {
       return DateFormat('dd MMM, yyyy \'at\' HH:mm').format(dateTime);
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
@@ -140,7 +141,7 @@ class MainUtils {
         'MMM yyyy',
       ).format(DateFormat('yyyy-MM-dd').parse(dateTime));
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
@@ -150,7 +151,7 @@ class MainUtils {
         'dd MMM yyyy  hh:mm a',
       ).format(DateFormat('yyyy-MM-dd HH:mm:ss').parse(dateTime));
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
@@ -159,13 +160,13 @@ class MainUtils {
       if (dateTime == null) return '';
       return DateFormat('dd MMM, yyyy').format(dateTime);
     } catch (e) {
-      return "Unknown date";
+      return 'Unknown date';
     }
   }
 
   static DateTime? convertStringToDatetime(String dateTime) {
     try {
-      return DateFormat("yyyy-MM-ddTHH:mm:ss.SSS").parse(dateTime);
+      return DateFormat('yyyy-MM-ddTHH:mm:ss.SSS').parse(dateTime);
     } catch (e) {
       return null;
     }
@@ -184,18 +185,18 @@ class MainUtils {
       final parsed = isoStringToLocalDate(dateTime);
       return parsed != null
           ? DateFormat('dd MMM yyyy  hh:mm a').format(parsed)
-          : "";
+          : '';
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
   static String isoStringToLocalDateOnly(String dateTime) {
     try {
       final parsed = isoStringToLocalDate(dateTime);
-      return parsed != null ? DateFormat('dd MMM yyyy').format(parsed) : "";
+      return parsed != null ? DateFormat('dd MMM yyyy').format(parsed) : '';
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
@@ -205,16 +206,16 @@ class MainUtils {
         'dd MMM yyyy',
       ).format(DateFormat('yyyy-MM-dd').parse(dateTime));
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
   static String localDateToIsoString(DateTime? dateTime) {
     try {
-      if (dateTime == null) return "";
+      if (dateTime == null) return '';
       return DateFormat('MMM dd, yyyy \'at\' hh:mm a').format(dateTime);
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
@@ -222,7 +223,7 @@ class MainUtils {
     try {
       return DateFormat('hh:mm a').format(DateFormat('HH:mm').parse(time));
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
@@ -232,7 +233,7 @@ class MainUtils {
         'hh:mm a',
       ).format(DateFormat('yyyy-MM-dd HH:mm:ss').parse(time));
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
@@ -257,15 +258,15 @@ class MainUtils {
       final inputDate = DateFormat('HH:mm:ss').parse(dateTime);
       return DateFormat('hh:mm a').format(inputDate);
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
   static TimeOfDay? convertStringToTimeOfDay(String timeString) {
     try {
-      List<String> parts = timeString.split(":");
-      int hour = int.parse(parts[0]);
-      int minute = int.parse(parts[1]);
+      final List<String> parts = timeString.split(':');
+      final int hour = int.parse(parts[0]);
+      final int minute = int.parse(parts[1]);
       return TimeOfDay(hour: hour, minute: minute);
     } catch (e) {
       return null;
@@ -278,7 +279,7 @@ class MainUtils {
     try {
       return DateFormat.d().format(dateTime!);
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
@@ -286,7 +287,7 @@ class MainUtils {
     try {
       return DateFormat.MMM().format(dateTime!).toUpperCase();
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
@@ -294,7 +295,7 @@ class MainUtils {
     try {
       return DateFormat.MMMMd().format(dateTime!).toUpperCase();
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
@@ -302,7 +303,7 @@ class MainUtils {
     try {
       return DateFormat('yyyy-MM-dd').format(dateTime!);
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
@@ -310,7 +311,7 @@ class MainUtils {
     try {
       return DateFormat.yMMMMd().format(dateTime!);
     } catch (e) {
-      return "";
+      return '';
     }
   }
 
@@ -318,13 +319,13 @@ class MainUtils {
     try {
       return DateFormat.yMMMMd().add_jm().format(dateTime!);
     } catch (e) {
-      return "";
+      return '';
     }
   }
 }
 
 String formatValue(dynamic value) {
-  if (value == null) return "";
+  if (value == null) return '';
 
   if (value is int) {
     return value.toString();
@@ -363,9 +364,9 @@ String formatPrice(double price) {
 }
 
 Color hexToColor(String hex) {
-  hex = hex.replaceAll("#", "");
+  hex = hex.replaceAll('#', '');
   if (hex.length == 6) {
-    hex = "FF$hex"; // add alpha if missing
+    hex = 'FF$hex'; // add alpha if missing
   }
   return Color(int.parse(hex, radix: 16));
 }

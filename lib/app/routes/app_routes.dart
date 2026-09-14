@@ -1,3 +1,6 @@
+// ignore_for_file: constant_identifier_names
+// Route names are pinned across the user's projects — do not lowerCamelCase them.
+
 class AppRoutes {
   static const String SplashScreen = '/';
 
@@ -5,7 +8,8 @@ class AppRoutes {
   static const String SigninScreen = '/signinScreen';
   static const String SignupScreen = '/signupScreen';
   static const String CreateAccountScreen = '/createAccountScreen';
-  static const String UserRegistrationInfoScreen = '/userRegistrationInfoScreen';
+  static const String UserRegistrationInfoScreen =
+      '/userRegistrationInfoScreen';
   static const String SentOtpScreen = '/sentOtpScreen';
   static const String VerifyOtpScreen = '/verifyOtpScreen';
   static const String RetypePassScreen = '/retypePassScreen';

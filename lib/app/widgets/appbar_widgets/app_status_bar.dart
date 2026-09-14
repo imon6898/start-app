@@ -27,19 +27,19 @@ class AppStatusBar extends StatelessWidget {
     required Widget child,
     Color statusBarColor = Colors.transparent,
     Color? navBarColor,
-  }) =>
-      AppStatusBar(
-        key: key,
-        style: SystemUiOverlayStyle(
-          statusBarColor: statusBarColor,
-          statusBarIconBrightness: Brightness.dark, // Android
-          statusBarBrightness: Brightness.light, // iOS
-          systemNavigationBarColor: navBarColor,
-          systemNavigationBarIconBrightness:
-              navBarColor == null ? null : Brightness.dark,
-        ),
-        child: child,
-      );
+  }) => AppStatusBar(
+    key: key,
+    style: SystemUiOverlayStyle(
+      statusBarColor: statusBarColor,
+      statusBarIconBrightness: Brightness.dark, // Android
+      statusBarBrightness: Brightness.light, // iOS
+      systemNavigationBarColor: navBarColor,
+      systemNavigationBarIconBrightness: navBarColor == null
+          ? null
+          : Brightness.dark,
+    ),
+    child: child,
+  );
 
   /// Light status-bar icons — use on DARK backgrounds.
   factory AppStatusBar.lightIcons({
@@ -47,19 +47,19 @@ class AppStatusBar extends StatelessWidget {
     required Widget child,
     Color statusBarColor = Colors.transparent,
     Color? navBarColor,
-  }) =>
-      AppStatusBar(
-        key: key,
-        style: SystemUiOverlayStyle(
-          statusBarColor: statusBarColor,
-          statusBarIconBrightness: Brightness.light, // Android
-          statusBarBrightness: Brightness.dark, // iOS
-          systemNavigationBarColor: navBarColor,
-          systemNavigationBarIconBrightness:
-              navBarColor == null ? null : Brightness.light,
-        ),
-        child: child,
-      );
+  }) => AppStatusBar(
+    key: key,
+    style: SystemUiOverlayStyle(
+      statusBarColor: statusBarColor,
+      statusBarIconBrightness: Brightness.light, // Android
+      statusBarBrightness: Brightness.dark, // iOS
+      systemNavigationBarColor: navBarColor,
+      systemNavigationBarIconBrightness: navBarColor == null
+          ? null
+          : Brightness.light,
+    ),
+    child: child,
+  );
 
   /// Theme-level defaults for `appBarTheme.systemOverlayStyle` so every screen
   /// with an AppBar gets the correct status bar automatically.

@@ -25,7 +25,9 @@ class AppTheme {
 
   // Get divider color dynamically
   static Color dividerColor(BuildContext context) {
-    return isDarkMode(context) ? const Color(0xff3f3f3f) : const Color(0xffDDDDDD);
+    return isDarkMode(context)
+        ? const Color(0xff3f3f3f)
+        : const Color(0xffDDDDDD);
   }
 
   // Get transparent background for dark mode

@@ -8,7 +8,7 @@ import 'package:flutter_starter/app/feature/auth/auth_logic/auth_api_service.dar
 import 'package:flutter_starter/app/feature/auth/auth_models/auth_response.dart';
 import 'package:flutter_starter/app/routes/app_routes.dart';
 import 'package:flutter_starter/app/services/local_data/cache_manager.dart';
-import 'package:flutter_starter/app/widgets/custom_snack_bar.dart';
+import 'package:flutter_starter/app/widgets/feedback/custom_snack_bar.dart';
 
 class VerifyOtpController extends GetxController {
   final GlobalKey<FormState> verifyOtpFormKey = GlobalKey<FormState>();
@@ -22,7 +22,7 @@ class VerifyOtpController extends GetxController {
 
   Timer? _timer;
 
-  String formattedTime = "01:00";
+  String formattedTime = '01:00';
 
   @override
   void onInit() {
@@ -34,20 +34,20 @@ class VerifyOtpController extends GetxController {
   final _authRepo = AuthRepo();
 
   // Get arguments from navigation
-  String fromPage = "";
-  String email = "";
-  String phone = "";
+  String fromPage = '';
+  String email = '';
+  String phone = '';
   String? countryCode;
-  String password = "";
+  String password = '';
 
   void _getArguments() {
     final arguments = Get.arguments;
     if (arguments is List && arguments.length >= 4) {
-      fromPage = arguments[0] ?? "";
-      email = arguments[1] ?? "";
-      phone = arguments[2] ?? "";
+      fromPage = arguments[0] ?? '';
+      email = arguments[1] ?? '';
+      phone = arguments[2] ?? '';
       countryCode = arguments[3];
-      password = arguments.length >= 5 ? arguments[4] ?? "" : "";
+      password = arguments.length >= 5 ? arguments[4] ?? '' : '';
     }
   }
 
@@ -74,8 +74,8 @@ class VerifyOtpController extends GetxController {
   }
 
   void updateFormattedTime() {
-    int minutes = countdownTime.value ~/ 60;
-    int seconds = countdownTime.value % 60;
+    final int minutes = countdownTime.value ~/ 60;
+    final int seconds = countdownTime.value % 60;
     formattedTime =
         "${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
     update();
@@ -89,7 +89,7 @@ class VerifyOtpController extends GetxController {
     isLoadingVerifyOtp.value = true;
 
     try {
-      Map<String, dynamic> params = {
+      final Map<String, dynamic> params = {
         'otp': verificationCodeCtr.text,
         'email': email.isNotEmpty ? email : null,
         'phone': phone.isNotEmpty ? phone : null,
@@ -108,7 +108,7 @@ class VerifyOtpController extends GetxController {
         );
 
         // Navigate based on fromPage
-        if (fromPage == "fromForgot") {
+        if (fromPage == 'fromForgot') {
           // Navigate to reset password screen
           Get.toNamed(
             AppRoutes.RetypePassScreen,
@@ -119,7 +119,7 @@ class VerifyOtpController extends GetxController {
               'otp': verificationCodeCtr.text, // Pass the verified OTP
             },
           );
-        } else if (fromPage == "fromCreateAccount") {
+        } else if (fromPage == 'fromCreateAccount') {
           // For registration flow, logic the user and update UserDi
           await _loginAfterRegistration();
         } else {
@@ -180,21 +180,14 @@ class VerifyOtpController extends GetxController {
         CacheManager.setToken(token),
         if (loginData.refreshToken != null)
           CacheManager.setRefreshToken(loginData.refreshToken!),
-        if (user != null)
-          CacheManager.setUserData(jsonEncode(user.toJson())),
+        if (user != null) CacheManager.setUserData(jsonEncode(user.toJson())),
         CacheManager.removeIsGuest(),
         if (roles != null && roles.isNotEmpty)
           CacheManager.setRoles(jsonEncode(roles)),
       ]);
 
-      // Refresh UserDi
-      if (Get.isRegistered<UserDi>()) {
-        await Get.find<UserDi>().clearGuestMode();
-        await Get.find<UserDi>().refreshUser();
-      } else {
-        Get.put(UserDi(), permanent: true);
-        await Get.find<UserDi>().refreshUser();
-      }
+      await Get.find<UserDi>().clearGuestMode();
+      await Get.find<UserDi>().refreshUser();
 
       showCustomSnackBar(
         context: Get.context!,
@@ -223,7 +216,7 @@ class VerifyOtpController extends GetxController {
     isLoadingResendOtp.value = true;
 
     try {
-      Map<String, dynamic> params = {
+      final Map<String, dynamic> params = {
         'email': email.isNotEmpty ? email : this.email,
         'phone': phone.isNotEmpty ? phone : null,
         'country_code': countryCode,

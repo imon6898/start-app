@@ -5,7 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../utils/constants/app_colors.dart';
 import '../../utils/constants/app_fonts.dart';
 import '../../utils/responsive_utils.dart';
-import '../../widgets/appbar_widgets/appbar_widget.dart';
+import 'package:flutter_starter/app/widgets/appbar_widgets/appbar_widget.dart';
 
 /// Stands in for a screen the template does not ship (dashboard, onboarding,
 /// legal pages). Registered in [AppPages] so auth navigation never dead-ends —
@@ -22,7 +22,7 @@ class PlaceholderScreen extends StatelessWidget {
       appBar: AppBarWidget(title: title),
       body: Center(
         child: Padding(
-          padding: R.pad(horizontal: R.w(32)),
+          padding: R.pad(horizontal: 32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

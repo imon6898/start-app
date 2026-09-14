@@ -49,90 +49,96 @@ class AppBarWidget extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    var isShow =
+    final isShow =
         (isBackEnable && Navigator.canPop(context)) || isBackForcefullyShow;
     return Container(
-        color: backgroundColor ?? CustomColors.white(),
-        child: SafeArea(
-            child: Container(
+      color: backgroundColor ?? CustomColors.white(),
+      child: SafeArea(
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPadding ?? R.w(12),
+            vertical: R.h(0),
+          ),
+          decoration: BoxDecoration(
+            color: backgroundColor ?? CustomColors.white(),
+            boxShadow: [
+              BoxShadow(
+                color: backgroundColor ?? CustomColors.whiteStroke(),
+                spreadRadius: -R.r(
+                  10,
+                ), // Negative spread radius to contain the shadow
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          // decoration: BoxDecoration(
+          //   color: backgroundColor ?? Colors.transparent,
+          //   boxShadow: (elevation != null && elevation! > 0)
+          //       ? [
+          //           BoxShadow(
+          //             color: CustomColors.appBarShadow().withAlpha(
+          //               (0.1 * 255).round(),
+          //             ),
+          //             spreadRadius: 0,
+          //             blurRadius: elevation!,
+          //             offset: Offset(0, elevation! / 3),
+          //           ),
+          //         ]
+          //       : null,
+          // ),
+          child: AppBar(
+            forceMaterialTransparency: true,
+            centerTitle: centerTitle,
+            elevation: elevation,
+            title: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: horizontalPadding ?? R.w(12),
-                vertical: R.h(0),
               ),
-              decoration: BoxDecoration(
-                color: backgroundColor ?? CustomColors.white(),
-                boxShadow: [
-                  BoxShadow(
-                    color: backgroundColor ?? CustomColors.whiteStroke(),
-                    spreadRadius: -R.r(10), // Negative spread radius to contain the shadow
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-
-              ),
-              // decoration: BoxDecoration(
-              //   color: backgroundColor ?? Colors.transparent,
-              //   boxShadow: (elevation != null && elevation! > 0)
-              //       ? [
-              //           BoxShadow(
-              //             color: CustomColors.appBarShadow().withAlpha(
-              //               (0.1 * 255).round(),
-              //             ),
-              //             spreadRadius: 0,
-              //             blurRadius: elevation!,
-              //             offset: Offset(0, elevation! / 3),
-              //           ),
-              //         ]
-              //       : null,
-              // ),
-              child: AppBar(
-                forceMaterialTransparency: true,
-                centerTitle: centerTitle,
-                elevation: elevation,
-                title: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding ?? R.w(12)),
-                  child:
+              child:
                   titleWidget ??
-                      Text(
-                        title ?? "",
-                        style: CustomTextStyles.medium16.copyWith(color: titleColor ?? CustomColors.black()),
-                        maxLines: 1,
-                      ),
-                ),
-                toolbarHeight: AppBar().preferredSize.height,
-                leadingWidth: isShow || leadingWidget != null ? R.w(41) : R.w(16),
-                //before it was height+5w
-                leading:
+                  Text(
+                    title ?? '',
+                    style: CustomTextStyles.medium16.copyWith(
+                      color: titleColor ?? CustomColors.black(),
+                    ),
+                    maxLines: 1,
+                  ),
+            ),
+            toolbarHeight: AppBar().preferredSize.height,
+            leadingWidth: isShow || leadingWidget != null ? R.w(41) : R.w(16),
+            //before it was height+5w
+            leading:
                 leadingWidget ??
-                    (isShow
-                        ?
-                    // (isAutoLeadingEnable ?? true)
-                    //         ? AutoLeadingButton(
-                    //           color:
-                    //               leadingIcon?.color ??
-                    //               Theme.of(context).iconTheme.color,
-                    //         )
-                    //         :
-                    AppBarLeading(
-                      onLeadingTap: onLeadingTap,
-                      isForcefullyShow: isShow,
-                      icon: leadingIcon,
-                    )
-                        : const SizedBox()),
-                iconTheme: IconThemeData(
-                  color: Theme.of(context).primaryColor,
-                  size: R.sp(20),
-                ),
-                // titleTextStyle: TextStyle(color:const Color(0xff181818),fontSize: 22.sp,fontWeight: FontWeight.w700),
-                titleSpacing: titleSpacing ?? (isShow ? -R.w(10) : 0),
-                // actionsPadding: actionsPadding ?? EdgeInsets.all(8.w),
-                actionsPadding: EdgeInsets.zero,
-                backgroundColor: Colors.transparent,
-                actions: toolbarActions,
-
-              ),
-            )));
+                (isShow
+                    ?
+                      // (isAutoLeadingEnable ?? true)
+                      //         ? AutoLeadingButton(
+                      //           color:
+                      //               leadingIcon?.color ??
+                      //               Theme.of(context).iconTheme.color,
+                      //         )
+                      //         :
+                      AppBarLeading(
+                        onLeadingTap: onLeadingTap,
+                        isForcefullyShow: isShow,
+                        icon: leadingIcon,
+                      )
+                    : const SizedBox()),
+            iconTheme: IconThemeData(
+              color: Theme.of(context).primaryColor,
+              size: R.sp(20),
+            ),
+            // titleTextStyle: TextStyle(color:const Color(0xff181818),fontSize: 22.sp,fontWeight: FontWeight.w700),
+            titleSpacing: titleSpacing ?? (isShow ? -R.w(10) : 0),
+            // actionsPadding: actionsPadding ?? EdgeInsets.all(8.w),
+            actionsPadding: EdgeInsets.zero,
+            backgroundColor: Colors.transparent,
+            actions: toolbarActions,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -143,5 +149,4 @@ class AppBarWidget extends StatelessWidget implements PreferredSizeWidget {
 
     return Size.fromHeight(baseHeight + (additionalHeight ?? 0));
   }
-
 }

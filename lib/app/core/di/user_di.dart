@@ -60,17 +60,17 @@ class UserDi extends GetxController {
         try {
           userData = UserResponse.fromJson(jsonDecode(rawData));
           await CacheManager.setUserType(userType.toString().split('.').last);
-          log("Successfully loaded user data from cache");
+          log('Successfully loaded user data from cache');
         } catch (e) {
-          log("Error parsing cached user data: $e");
+          log('Error parsing cached user data: $e');
           userData = null;
         }
       } else {
-        log("No cached user data found");
+        log('No cached user data found');
         userData = null;
       }
     } catch (e) {
-      log("Error loading user data: $e");
+      log('Error loading user data: $e');
       userData = null;
     } finally {
       _isLoading = false;
@@ -79,14 +79,14 @@ class UserDi extends GetxController {
   }
 
   Future<void> refreshUser() async {
-    log("Refreshing user data in UserDi...");
+    log('Refreshing user data in UserDi...');
     await _loadUserData();
-    log("UserDi refresh complete: ${userData?.toJson()}");
+    log('UserDi refresh complete: ${userData?.toJson()}');
   }
 
   UserResponse get getUserData {
     if (_isLoading) {
-      log("Warning: getUserData called while still loading");
+      log('Warning: getUserData called while still loading');
       return UserResponse();
     }
     return userData ?? UserResponse();
@@ -101,7 +101,7 @@ class UserDi extends GetxController {
     if (value) {
       await CacheManager.setUserType(UserType.guest.toString().split('.').last);
     }
-    log("Guest mode set to: $value");
+    log('Guest mode set to: $value');
     update();
   }
 
@@ -109,7 +109,7 @@ class UserDi extends GetxController {
   Future<void> clearGuestMode() async {
     _isGuest = false;
     await CacheManager.removeIsGuest();
-    log("Guest mode cleared");
+    log('Guest mode cleared');
     update();
   }
 
@@ -125,7 +125,7 @@ class UserDi extends GetxController {
       CacheManager.removeIsGuest(),
       CacheManager.removeRoles(),
     ]);
-    log("User data cleared");
+    log('User data cleared');
     update();
   }
 }

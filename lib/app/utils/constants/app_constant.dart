@@ -30,10 +30,10 @@ double scale() {
   return screenWidth < 360
       ? 0.85
       : screenWidth < 480
-          ? 1.0
-          : screenWidth < 720
-              ? 1.1
-              : 1.2;
+      ? 1.0
+      : screenWidth < 720
+      ? 1.1
+      : 1.2;
 }
 
 /// Advanced scale factor that considers both device type and orientation
@@ -69,8 +69,8 @@ double scaleWithOrientation() {
       return screenWidth < 360
           ? 0.85
           : screenWidth < 480
-              ? 1.0
-              : 1.05;
+          ? 1.0
+          : 1.05;
     }
   }
 }

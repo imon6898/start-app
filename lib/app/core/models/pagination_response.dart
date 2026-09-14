@@ -65,12 +65,12 @@ class PaginationResponse<T> {
   }
 
   Map<String, dynamic> toJson(Map<String, dynamic> Function(T) toJsonT) => {
-    "items": items.map((x) => toJsonT(x)).toList(),
-    "current_page": currentPage,
-    "last_page": lastPage,
-    "total_count": totalCount,
-    "per_page": perPage,
-    "total_pages": totalPages,
+    'items': items.map((x) => toJsonT(x)).toList(),
+    'current_page': currentPage,
+    'last_page': lastPage,
+    'total_count': totalCount,
+    'per_page': perPage,
+    'total_pages': totalPages,
   };
 
   PaginationResponse<T> copyWith({
