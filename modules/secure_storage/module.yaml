@@ -1,0 +1,76 @@
+name: secure_storage
+description: >-
+  Encrypted auth-token storage. SecureStore keeps the access and refresh token
+  in Android EncryptedSharedPreferences / the iOS Keychain instead of plaintext
+  SharedPreferences, and migrates any existing plaintext token once, on launch.
+
+# Copy each path from modules/secure_storage/<path> to <path> in the project.
+files:
+  - lib/app/services/local_data/secure_store.dart
+
+dependencies:
+  flutter_secure_storage: ^9.2.4
+
+# Already in core, no action needed: shared_preferences.
+
+core_dependencies:
+  - lib/app/services/local_data/cache_manager.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/bootstrap.dart
+
+setup:
+  - >-
+    bootstrap.dart: add "await SecureStore.init();" on the line after
+    "await CacheManager.init();". It runs the one-time plaintext migration and
+    warms the in-memory copy the sync accessors read.
+  - >-
+    Then move the six token call sites off CacheManager onto SecureStore. The
+    getters become async, so the callers must await. The README has the exact
+    diff for api_service.dart, user_di.dart, splash_controller.dart,
+    signin_controller.dart and verify_otp_controller.dart.
+  - >-
+    Optional cleanup once every caller has moved: delete the token and
+    refreshToken members from CacheManager and their CacheKeys enum entries.
+    Leave CacheKeys.token spelled "token" until the migration has shipped to
+    every install, the migration reads that exact key.
+
+routes: None. This module adds no screens.
+
+bindings: None. SecureStore is a static class, like CacheManager.
+
+platform_config:
+  android:
+    min_sdk: >-
+      Set minSdk to 23 or higher in android/app/build.gradle.kts.
+      EncryptedSharedPreferences needs API 23. Below it the plugin silently
+      falls back to its own AES plus RSA-KeyStore scheme, which is weaker.
+    backup: >-
+      Auto Backup copies the encrypted prefs file but not the KeyStore key, so
+      a restored app reads garbage. Either set android:allowBackup="false" on
+      <application>, or add a backup rule excluding the
+      FlutterSecureStorage shared-prefs file.
+    proguard: >-
+      No extra rules. The plugin ships its own consumer-proguard file.
+  ios:
+    entitlements: >-
+      None for iOS. Signing already grants the default keychain access group.
+      Keychain items survive an app uninstall, clearAll on logout matters.
+    podfile: platform :ios, '12.0' or higher, then pod install
+  macos:
+    entitlements: >-
+      macOS only. Add the Keychain Sharing capability to
+      macos/Runner/DebugProfile.entitlements and Release.entitlements.
+  web: >-
+    flutter_secure_storage_web stores AES-GCM ciphertext in localStorage with
+    the key in IndexedDB. Anything running in the page can read both. Treat web
+    as unencrypted.
+
+notes: >-
+  The getters are Futures. "CacheManager.token" becomes "await SecureStore.token",
+  which is the whole cost of this module. For the one call site that cannot
+  await, the Dio BaseOptions block in ApiService's constructor, use
+  SecureStore.tokenSync, valid after init(). clearAll() deletes only the two
+  keys this module owns, it does not call deleteAll(), so other plugins keeping
+  secrets in the same store are untouched. The migration flag
+  secure_store_migrated_v1 lives in SharedPreferences, so CacheManager.removeAll()
+  on logout clears it and the next launch re-runs a no-op migration. Harmless.

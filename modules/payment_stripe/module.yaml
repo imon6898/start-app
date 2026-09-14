@@ -1,0 +1,128 @@
+name: payment_stripe
+description: >-
+  Stripe PaymentSheet checkout in the feature-first GetX layout: checkout screen,
+  result screen, sealed PaymentResult, and a Repo/Impl/ApiService trio that talks
+  to YOUR backend for the client_secret. The app only ever holds the publishable
+  key - the secret key stays server-side.
+
+# Copy each path from modules/payment_stripe/<path> to <path> in the project.
+files:
+  - lib/app/feature/payment/payment_models/payment_intent_model.dart
+  - lib/app/feature/payment/payment_models/payment_result.dart
+  - lib/app/feature/payment/payment_logic/payment_api_const.dart
+  - lib/app/feature/payment/payment_logic/payment_api_service.dart
+  - lib/app/feature/payment/payment_controllers/payment_controller.dart
+  - lib/app/feature/payment/payment_presentation/checkout_screen.dart
+  - lib/app/feature/payment/payment_presentation/payment_result_screen.dart
+
+dependencies:
+  flutter_stripe: "^12.6.0"
+
+# Already in core, no action needed: get, dio, flutter_dotenv, lucide_icons_flutter.
+
+env:
+  STRIPE_PUBLISHABLE_KEY: >-
+    Stripe publishable key (pk_test_... / pk_live_...), read through
+    Env.stripePublishableKey. Keep it an optional() getter - do NOT add it to
+    Env.requiredKeys, or projects without payments will refuse to boot.
+
+setup: |
+  *** SECURITY CONTRACT - READ BEFORE WIRING ANYTHING UP ***
+
+  1. YOUR backend creates the PaymentIntent with the Stripe SECRET key and
+     returns only the client_secret.
+  2. The app holds the PUBLISHABLE key (pk_...) plus that client_secret, and
+     nothing else. An sk_ key shipped in an app binary is trivially extractable
+     and lets anyone charge your Stripe account any amount they like.
+  3. The amount and currency are decided SERVER-side. What CheckoutScreen sends
+     is a display hint for the order - never trust it as the charge.
+  4. The Stripe WEBHOOK hitting your backend is the proof of payment. The app's
+     success callback only means the sheet closed. Fulfil orders on the webhook,
+     not on PaymentSuccess.
+
+  PaymentController refuses to initialise on a key that does not start with
+  "pk_", so an sk_ key in .env disables payments instead of leaking.
+
+  Backend work this module expects:
+  - POST /pay/stripe/payment-intent -> BaseResponse with
+    data = { client_secret, payment_intent_id, amount, currency, status }
+  - GET  /pay/stripe/payment-status?payment_intent_id=... -> the same envelope
+  Both are relative paths on ApiService's base URL - never api.stripe.com.
+
+bindings: >-
+  lib/app/bindings/view_model_binding.dart - both screens use
+  GetBuilder<PaymentController>, so they throw on first build without this:
+  _lazy<PaymentController>(() => PaymentController());
+  plus the import
+  '../feature/payment/payment_controllers/payment_controller.dart'.
+
+routes: >-
+  Optional - navigation is widget-first (Get.to(() => CheckoutScreen(...))).
+  For a named route add to AppRoutes:
+  static const String CheckoutScreen = '/checkoutScreen';
+  and to AppPages.pages:
+  _page(AppRoutes.CheckoutScreen, () => const CheckoutScreen()).
+  PaymentResultScreen takes a required PaymentResult, so keep pushing it as a
+  widget rather than by name.
+
+platform_config:
+  android: |
+    Verified against flutter_stripe 12.6.0's own README (pub cache).
+    1. minSdk 21 or higher - android/app/build.gradle.kts. flutter.minSdkVersion
+       already resolves to 21+, so usually nothing to change.
+    2. Kotlin 1.8.0+ and Android Gradle Plugin 8+ (template: Kotlin 2.3.20, AGP 9.0.1 - OK).
+    3. MainActivity MUST extend FlutterFragmentActivity, not FlutterActivity.
+       android/app/src/main/kotlin/com/easital/starter/MainActivity.kt currently reads:
+         import io.flutter.embedding.android.FlutterActivity
+         class MainActivity : FlutterActivity()
+       Change both lines to:
+         import io.flutter.embedding.android.FlutterFragmentActivity
+         class MainActivity : FlutterFragmentActivity()
+    4. The activity theme must descend from Theme.AppCompat. In
+       android/app/src/main/res/values/styles.xml change NormalTheme's parent to
+       "Theme.AppCompat.Light.NoActionBar", and in values-night/styles.xml to
+       "Theme.AppCompat.NoActionBar".
+    5. Release builds: add the Stripe proguard rules (see README) to
+       android/app/proguard-rules.pro - the file does not exist yet, create it.
+    6. Full rebuild after these edits; hot reload will not pick them up.
+  ios: |
+    Verified against flutter_stripe 12.6.0's README: compatible with apps
+    targeting iOS 13 or above.
+    1. ios/Podfile - uncomment the first line so it reads:
+         platform :ios, '13.0'
+    2. Set IPHONEOS_DEPLOYMENT_TARGET to 13.0 in Xcode Build Settings.
+    3. Then: cd ios && pod install
+    4. Card scanning only - add NSCameraUsageDescription to Info.plist.
+  notes: |
+    flutter_stripe 12.6.0 requires Dart sdk >=3.8.1 (template is on 3.12.2).
+    No manual plugin registration is needed beyond the FlutterFragmentActivity
+    change above.
+
+core_dependencies:
+  - lib/app/core/config/env.dart
+  - lib/app/core/models/base_response.dart
+  - lib/app/services/domain/api_service.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/widgets/appbar_widgets/appbar_widget.dart
+  - lib/app/widgets/buttons/custom_primary_button.dart
+  - lib/app/widgets/feedback/custom_snack_bar.dart
+  - lib/app/widgets/feedback/status_badge.dart
+  - lib/app/widgets/feedback/success_dialog.dart
+  - lib/app/widgets/layout/layout_components.dart
+
+notes: |
+  Test mode cards: 4242 4242 4242 4242 succeeds, 4000 0000 0000 0002 is declined
+  (generic_decline), 4000 0025 0000 3155 requires 3D Secure. Any future expiry,
+  any CVC, any postcode.
+
+  CheckoutScreen ships demo line items so it runs out of the box. Replace the
+  `items` list with your cart model and delete the default value before shipping.
+
+  formatMinor() divides by 100. Zero-decimal Stripe currencies (JPY, KRW, VND)
+  need a divisor of 1 - fix it there if you sell in those markets.
+
+  PaymentApiConst is standalone, so installing this module needs no edit to the
+  core lib/app/services/domain/api_const.dart.

@@ -28,6 +28,7 @@ hand. It refuses to overwrite an existing file unless you pass `--force`.
 | **location_picker** | Google Places autocomplete + Google Map with a centre pin as the selected point, plus GPS/permission/IP location services. | `geolocator`, `permission_handler`, `google_maps_flutter`, `google_places_flutter`, `geocoding` | Yes — Maps API key, location permissions |
 | **media_viewer** | Fullscreen image/video gallery + inline thumbnail. Pinch/double-tap zoom, custom video player with double-tap seek and scrubbable progress. Network, file and asset sources. | `cached_network_image`, `video_player` | Yes — INTERNET, cleartext/ATS for http |
 | **multi_step_onboarding** | *Reference module.* Rider + merchant registration wizards: PageView step machine, per-step validation, multipart upload, cascading location dropdowns, Repo/Impl API split. Copy the structure, replace the fields. | `image_picker`, `file_picker`, `pinput`, `intl`, `permission_handler`, `lucide_icons_flutter`, `flutter_svg`, `shared_preferences` | Yes — camera/photo permissions, API endpoints |
+| **payment_stripe** | Stripe PaymentSheet checkout: checkout screen, result screen, sealed `PaymentResult`, Repo/Impl/ApiService trio. The app holds only the **publishable** key — your backend creates the PaymentIntent and the webhook confirms it. | `flutter_stripe` | Yes — `FlutterFragmentActivity`, AppCompat theme, iOS 13 |
 | **rich_text_editor** | `CustomQuilTextField` — themed WYSIWYG form field with optional heading, configurable toolbar, bordered editor box. | `flutter_quill` | No |
 | **webview** | `CustomWebView` in-app browser: progress bar, title/host app bar, nav bottom bar, share, open externally, copy link, tel/mailto/sms handoff. | `flutter_inappwebview`, `share_plus`, `url_launcher` | Yes — INTERNET, `url_launcher` queries/schemes |
 
@@ -40,6 +41,8 @@ plist snippets. Read it after installing.
   install that first. Its map step needs **location_picker** (optional).
 - `html_view` opens web links in the external browser by default. Install **webview** and set
   `AppHtmlView.webViewOpener = CustomWebView.open` at startup to open them in-app instead.
+- `payment_stripe` is useless on its own: it needs two endpoints on **your** backend, which is where the
+  Stripe secret key lives. Never put an `sk_...` key in the app — read that module's README first.
 - Modules assume the template's core files exist (`app_colors.dart`, `app_fonts.dart`,
   `responsive_utils.dart`, …). The installer prints the exact list per module; if you're dropping a
   module into a different project, copy those first.
