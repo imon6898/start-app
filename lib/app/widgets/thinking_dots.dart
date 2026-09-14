@@ -1,7 +1,5 @@
-import 'package:calldone/app/utils/constants/app_fonts.dart';
+import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
 import 'package:flutter/material.dart';
-
-import '../utils/constants/app_colors.dart';
 
 class ThinkingDots extends StatefulWidget {
   final String? title;

@@ -3,10 +3,10 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:calldone/app/services/ip_location_service.dart';
-import 'package:calldone/app/utils/constants/app_colors.dart';
-import 'package:calldone/app/utils/constants/app_fonts.dart';
-import 'package:calldone/app/utils/responsive_utils.dart';
+import 'package:flutter_starter/app/services/ip_location_service.dart';
+import 'package:flutter_starter/app/utils/constants/app_colors.dart';
+import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
+import 'package:flutter_starter/app/utils/responsive_utils.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Country model

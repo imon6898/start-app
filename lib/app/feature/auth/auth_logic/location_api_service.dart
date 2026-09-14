@@ -1,5 +1,5 @@
-import 'package:logistics/app/services/domain/api_const.dart';
-import 'package:logistics/app/services/domain/api_service.dart';
+import 'package:flutter_starter/app/services/domain/api_const.dart';
+import 'package:flutter_starter/app/services/domain/api_service.dart';
 
 /// Abstract class for Location API Service
 abstract class LocationApiService {

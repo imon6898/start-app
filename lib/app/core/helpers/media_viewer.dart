@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:calldone/app/services/domain/api_const.dart';
+import 'package:flutter_starter/app/services/domain/api_const.dart';
 
 // ─── Enums & Models ──────────────────────────────────────────────────────────
 

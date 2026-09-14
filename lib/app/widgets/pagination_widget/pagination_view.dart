@@ -1,4 +1,4 @@
-import 'package:calldone/app/widgets/pagination_widget/pagination_helper.dart';
+import 'package:flutter_starter/app/widgets/pagination_widget/pagination_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:lazy_load_scrollview/lazy_load_scrollview.dart';

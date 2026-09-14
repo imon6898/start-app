@@ -2,12 +2,12 @@ import 'dart:io';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:calldone/app/core/enums/enums.dart';
+import 'package:flutter_starter/app/core/enums/enums.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:calldone/app/utils/constants/app_colors.dart';
-import 'package:calldone/app/utils/constants/app_fonts.dart';
-import 'package:calldone/app/utils/responsive_utils.dart';
-import 'package:calldone/app/widgets/custom_image.dart';
+import 'package:flutter_starter/app/utils/constants/app_colors.dart';
+import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
+import 'package:flutter_starter/app/utils/responsive_utils.dart';
+import 'package:flutter_starter/app/widgets/custom_image.dart';
 
 class FileUploadWidget extends StatelessWidget {
   final String? title;

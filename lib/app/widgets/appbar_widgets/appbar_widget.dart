@@ -1,6 +1,6 @@
-import 'package:calldone/app/utils/constants/app_colors.dart';
-import 'package:calldone/app/utils/constants/app_fonts.dart';
-import 'package:calldone/app/widgets/appbar_widgets/app_bar_leading.dart';
+import 'package:flutter_starter/app/utils/constants/app_colors.dart';
+import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
+import 'package:flutter_starter/app/widgets/appbar_widgets/app_bar_leading.dart';
 import 'package:flutter/material.dart';
 
 import '../../utils/responsive_utils.dart';

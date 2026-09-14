@@ -1,11 +1,11 @@
 import 'dart:io';
-import 'package:calldone/app/core/enums/enums.dart';
-import 'package:calldone/app/services/domain/api_const.dart';
+import 'package:flutter_starter/app/core/enums/enums.dart';
+import 'package:flutter_starter/app/services/domain/api_const.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:calldone/app/utils/constants/app_assets.dart';
-import 'package:calldone/app/services/domain/api_const.dart';
+import 'package:flutter_starter/app/utils/constants/app_assets.dart';
+import 'package:flutter_starter/app/services/domain/api_const.dart';
 
 import '../core/enums/enums.dart';
 import '../utils/constants/app_colors.dart';

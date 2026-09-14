@@ -4,8 +4,8 @@ import 'package:html_unescape/html_unescape.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:calldone/app/themes/theme_controller.dart';
-import 'package:calldone/app/widgets/custom_webview.dart';
+import 'package:flutter_starter/app/themes/theme_controller.dart';
+import 'package:flutter_starter/app/widgets/custom_webview.dart';
 
 class AppHtmlView {
   /// Helper method to process inline colors based on theme

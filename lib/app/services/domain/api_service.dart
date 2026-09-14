@@ -6,7 +6,7 @@ import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pretty_dio_devPrintger/pretty_dio_devPrintger.dart';
+import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../routes/app_routes.dart';
 import '../../utils/constants/app_assets.dart';
@@ -22,10 +22,10 @@ class ApiService {
   static bool _isRefreshing = false;
   static Completer<bool>? _refreshCompleter;
 
-  ApiService({bool? googleBaseUrl, bool? devPrintisticsBaseUrl}) {
+  ApiService({bool? googleBaseUrl, bool? logisticsBaseUrl}) {
     BaseOptions options = BaseOptions(
-      baseUrl: devPrintisticsBaseUrl == true
-          ? (kDebugMode ? ApiConstant.devdevPrintisticsBaseUrl : ApiConstant.devPrintisticsBaseUrl)
+      baseUrl: logisticsBaseUrl == true
+          ? (kDebugMode ? ApiConstant.devLogisticsBaseUrl : ApiConstant.logisticsBaseUrl)
           : kDebugMode
               ? googleBaseUrl == true
                     ? ApiConstant.googleBaseUrl
@@ -143,7 +143,7 @@ class ApiService {
 
     if (kDebugMode) {
       _dio.interceptors.add(
-        PrettyDiodevPrintger(
+        PrettyDioLogger(
           requestHeader: false,
           requestBody: true,
           responseBody: true,
@@ -292,7 +292,7 @@ class ApiService {
       );
       devPrint("check response Repo api service e.message = ${e.response?.data}");
       // if (e.response?.statusCode == null) {
-      //  Get.offAllNamed(AppRoutes.devPrintinScreen);
+      //  Get.offAllNamed(AppRoutes.SigninScreen);
       // }
 
       devPrint("check response Repo api service = ${e.response?.data['error']}");
@@ -764,7 +764,7 @@ errorHandle({
       if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
         // Remove all local data when session is expired
         // await CacheManager.removeAllLocalData();
-        // await _showAuthErrorDiadevPrint(
+        // await _showAuthErrorDialog(
         //   statusCode: e.response?.statusCode ?? 401,
         //   context: context ?? Get.context,
         // );
@@ -774,16 +774,20 @@ errorHandle({
         //     context: context,
         //     type: SnackBarType.Warning,
         //     title: "Warning",
-        //     description: "You have devPrintged out, Token invalid.",
+        //     description: "You have logged out, Token invalid.",
         //   );
         // }
         // Navigate to the sign-in screen
         //Get.offAllNamed(AppRoutes.LandingScreen);
       }
 
-      // devPrint the response message
+      // log the response message
       // devPrint("DioErrorType.badResponse ${e.response?.data['message']['phone'][0]}");
       // devPrint("DioErrorType.badResponse ${e.response?.data['message'] ?? "timeout"}");
+      break;
+    default:
+      // covers future DioExceptionType values (e.g. transformTimeout)
+      devPrint("DioErrorType unhandled: ${e.type}");
       break;
   }
 }
@@ -810,8 +814,8 @@ Future<bool> checkInternet() async {
   return false;
 }
 
-// Helper function to show authentication error diadevPrint
-Future<void> _showAuthErrorDiadevPrint({
+// Helper function to show authentication error dialog
+Future<void> _showAuthErrorDialog({
   required int statusCode,
   BuildContext? context,
 }) async {
@@ -822,27 +826,27 @@ Future<void> _showAuthErrorDiadevPrint({
 
   if (statusCode == 401) {
     title = "Session Expired";
-    message = "Your session has expired. Please devPrint in again to continue.";
+    message = "Your session has expired. Please log in again to continue.";
   } else if (statusCode == 403) {
     title = "Access Denied";
     message =
-        "You don't have permission to access this resource. Please devPrint in again.";
+        "You don't have permission to access this resource. Please log in again.";
   }
 
-  await customSuccessDiadevPrint(
+  await customSuccessDialog(
     imagePath: ImageUtils.ErrorIcon,
     context,
     title: title,
     message: message,
-    buttonText: "Go to devPrintin",
+    buttonText: "Go to Login",
     onPressed: () async {
       // Clear all cached data
       await CacheManager.removeToken();
       await CacheManager.removeUserData();
 
-      // Close diadevPrint and navigate to sign in
+      // Close dialog and navigate to sign in
       if (context.mounted) {
-        Navigator.of(context).pop(); // Close diadevPrint
+        Navigator.of(context).pop(); // Close dialog
       }
       //AppRouter.router.go(AppRoutes.SigninScreen);
       Get.offAndToNamed(AppRoutes.SigninScreen);

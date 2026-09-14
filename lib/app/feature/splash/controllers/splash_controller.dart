@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../routes/app_routes.dart';
 import '../../../widgets/custom_snack_bar.dart';
-import '../../../services/data/cache_manager.dart';
+import '../../../services/local_data/cache_manager.dart';
 import '../../../core/di/user_di.dart';
 
 class SplashScreenController extends GetxController

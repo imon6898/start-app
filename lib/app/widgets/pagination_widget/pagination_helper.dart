@@ -1,7 +1,7 @@
 import 'dart:developer';
 
 import 'package:get/get.dart';
-import 'package:calldone/app/core/models/pagination_response.dart';
+import 'package:flutter_starter/app/core/models/pagination_response.dart';
 
 /// Result wrapper for pagination that includes metadata
 class PaginationResult<T> {

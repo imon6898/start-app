@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:get/get.dart';
-import 'package:calldone/app/core/enums/enums.dart';
-import 'package:calldone/app/core/models/user_response.dart';
-import 'package:calldone/app/services/local_data/cache_manager.dart';
+import 'package:flutter_starter/app/core/enums/enums.dart';
+import 'package:flutter_starter/app/core/models/user_response.dart';
+import 'package:flutter_starter/app/services/local_data/cache_manager.dart';
 
 class UserDi extends GetxController {
   UserResponse? userData;

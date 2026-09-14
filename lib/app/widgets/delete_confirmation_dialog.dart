@@ -1,7 +1,7 @@
-import 'package:calldone/app/utils/constants/app_colors.dart';
-import 'package:calldone/app/utils/constants/app_fonts.dart';
-import 'package:calldone/app/utils/responsive_utils.dart';
-import 'package:calldone/app/widgets/custom_primary_button.dart';
+import 'package:flutter_starter/app/utils/constants/app_colors.dart';
+import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
+import 'package:flutter_starter/app/utils/responsive_utils.dart';
+import 'package:flutter_starter/app/widgets/custom_primary_button.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 

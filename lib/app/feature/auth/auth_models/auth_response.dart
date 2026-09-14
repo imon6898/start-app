@@ -1,4 +1,4 @@
-import 'package:logistics/app/core/models/user_response.dart';
+import 'package:flutter_starter/app/core/models/user_response.dart';
 
 class LoginData {
   final String? accessToken;

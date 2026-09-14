@@ -1,6 +1,6 @@
-import 'package:logistics/app/core/enums/enums.dart';
-import 'package:logistics/app/utils/responsive_utils.dart';
-import 'package:logistics/app/widgets/custom_image.dart';
+import 'package:flutter_starter/app/core/enums/enums.dart';
+import 'package:flutter_starter/app/utils/responsive_utils.dart';
+import 'package:flutter_starter/app/widgets/custom_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../utils/constants/app_assets.dart';

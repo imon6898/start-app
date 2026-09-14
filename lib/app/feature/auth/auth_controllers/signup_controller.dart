@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:logistics/app/core/di/user_di.dart';
-import 'package:logistics/app/feature/auth/auth_logic/auth_api_service.dart';
-import 'package:logistics/app/routes/app_routes.dart';
-import 'package:logistics/app/services/data/cache_manager.dart';
-import 'package:logistics/app/widgets/custom_phone_text_field.dart';
-import 'package:logistics/app/widgets/custom_snack_bar.dart';
+import 'package:flutter_starter/app/core/di/user_di.dart';
+import 'package:flutter_starter/app/feature/auth/auth_logic/auth_api_service.dart';
+import 'package:flutter_starter/app/routes/app_routes.dart';
+import 'package:flutter_starter/app/services/local_data/cache_manager.dart';
+import 'package:flutter_starter/app/widgets/custom_phone_text_field.dart';
+import 'package:flutter_starter/app/widgets/custom_snack_bar.dart';
 
 class SignupController extends GetxController {
   /// Used by `signup_screen.dart`. NOT used by `user_registration_info_screen.dart`,

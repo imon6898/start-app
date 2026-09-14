@@ -1,5 +1,5 @@
-import 'package:calldone/app/utils/constants/app_colors.dart';
-import 'package:calldone/app/utils/constants/app_fonts.dart';
+import 'package:flutter_starter/app/utils/constants/app_colors.dart';
+import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';

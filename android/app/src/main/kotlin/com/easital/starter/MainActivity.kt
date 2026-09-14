@@ -1,4 +1,4 @@
-package com.easital.calldone
+package com.easital.starter
 
 import io.flutter.embedding.android.FlutterActivity
 

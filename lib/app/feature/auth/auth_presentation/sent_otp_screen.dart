@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:logistics/app/feature/auth/auth_controllers/sent_otp_controller.dart';
-import 'package:logistics/app/utils/constants/app_colors.dart';
-import 'package:logistics/app/utils/constants/app_fonts.dart';
-import 'package:logistics/app/utils/responsive_utils.dart';
-import 'package:logistics/app/utils/validator.dart';
-import 'package:logistics/app/widgets/appbar_widget.dart';
-import 'package:logistics/app/widgets/custom_phone_text_field.dart';
-import 'package:logistics/app/widgets/custom_primary_button.dart';
-import 'package:logistics/app/widgets/custom_text_field.dart';
+import 'package:flutter_starter/app/feature/auth/auth_controllers/sent_otp_controller.dart';
+import 'package:flutter_starter/app/utils/constants/app_colors.dart';
+import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
+import 'package:flutter_starter/app/utils/responsive_utils.dart';
+import 'package:flutter_starter/app/utils/validator.dart';
+import 'package:flutter_starter/app/widgets/appbar_widgets/appbar_widget.dart';
+import 'package:flutter_starter/app/widgets/custom_phone_text_field.dart';
+import 'package:flutter_starter/app/widgets/custom_primary_button.dart';
+import 'package:flutter_starter/app/widgets/custom_text_field.dart';
 
 class SentOtpScreen extends StatelessWidget {
   const SentOtpScreen({super.key});
