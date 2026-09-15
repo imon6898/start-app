@@ -1,0 +1,193 @@
+name: offline_first
+description: >-
+  Offline-first data layer with a sync engine: writes land in a local sqlite
+  store (drift) and a durable outbox, each queued mutation carrying a
+  client-generated UUID as its idempotency key so a replay after a timeout
+  cannot double-apply. Optimistic updates with rollback on rejection,
+  last-write-wins conflict resolution behind a pluggable resolver, sync on
+  reconnect / resume / pull-to-refresh, full-jitter exponential backoff, and Rx
+  status + pendingCount + lastSyncedAt. Ships a worked "notes" entity and 28
+  tests. Requires real server support - see the README.
+
+# Copy each path from modules/offline_first/<path> to <path> in the project.
+files:
+  - lib/app/services/sync/sync_status.dart
+  - lib/app/services/sync/sync_backoff.dart
+  - lib/app/services/sync/sync_record.dart
+  - lib/app/services/sync/outbox_op.dart
+  - lib/app/services/sync/sync_conflict_resolver.dart
+  - lib/app/services/sync/sync_store.dart
+  - lib/app/services/sync/sync_transport.dart
+  - lib/app/services/sync/sync_config.dart
+  - lib/app/services/sync/memory_sync_store.dart
+  - lib/app/services/sync/sync_service.dart
+  - lib/app/services/sync/drift/sync_database.dart
+  - lib/app/services/sync/drift/drift_sync_store.dart
+  - lib/app/widgets/feedback/sync_status_banner.dart
+  - lib/app/feature/notes/notes_models/note_model.dart
+  - lib/app/feature/notes/notes_logic/notes_api_const.dart
+  - lib/app/feature/notes/notes_logic/notes_api_service.dart
+  - lib/app/feature/notes/notes_logic/notes_sync_transport.dart
+  - lib/app/feature/notes/notes_controllers/notes_controller.dart
+  - lib/app/feature/notes/notes_presentation/notes_screen.dart
+  - test/unit/offline_first_test.dart
+
+dependencies:
+  drift: "^2.20.0"
+  sqlite3_flutter_libs: "^0.5.24"
+  path_provider: "^2.1.5"
+  uuid: "^4.5.1"
+
+# NOT installed by the installer - it only writes the top-level dependencies
+# block. Add these two to dev_dependencies BY HAND. They are REQUIRED, not
+# optional: without them drift generates no code and the project will not build.
+optional_dependencies:
+  drift_dev: "^2.20.0"
+  build_runner: "^2.4.13"
+
+setup: |
+  STEP 0 - REQUIRED. Add to dev_dependencies in pubspec.yaml, then generate:
+      dev_dependencies:
+        drift_dev: ^2.20.0
+        build_runner: ^2.4.13
+
+      flutter pub get
+      dart run build_runner build
+
+  This writes lib/app/services/sync/drift/sync_database.g.dart. Until it exists
+  `flutter analyze` reports errors in sync_database.dart and drift_sync_store
+  .dart - that is expected, not a broken module. Re-run build_runner after any
+  edit to the table definitions.
+
+  STEP 1 - lib/bootstrap.dart. Add the imports:
+      import 'package:get/get.dart';
+      import 'app/feature/notes/notes_logic/notes_sync_transport.dart';
+      import 'app/services/domain/api_service.dart';
+      import 'app/services/sync/drift/drift_sync_store.dart';
+      import 'app/services/sync/sync_service.dart';
+
+  Then, inside bootstrap(), after `await CacheManager.init();` and BEFORE
+  `ViewModelBinding().dependencies();`:
+
+      // Offline-first: one store, one service, one transport per collection.
+      final sync = Get.put(
+        SyncService(store: DriftSyncStore(), isOnline: checkInternet),
+        permanent: true,
+      );
+      sync.register(NotesSyncTransport.collection, NotesSyncTransport());
+
+  `checkInternet` is the top-level helper already in api_service.dart. Create
+  the SyncDatabase exactly ONCE - drift warns about a second instance.
+
+  STEP 2 - lib/app/bindings/view_model_binding.dart. REQUIRED while the notes
+  example is present: test/guardrails/bindings_test.dart fails on any
+  unregistered controller under lib/app/feature.
+      import '../feature/notes/notes_controllers/notes_controller.dart';
+
+      // Notes (offline_first example)
+      _lazy<NotesController>(() => NotesController());
+
+  STEP 3 - translations. REQUIRED: test/guardrails/localization_test.dart fails
+  on a `.tr` literal with no entry, and on any locale whose key set differs.
+  Add all 11 keys to BOTH lib/app/localization/locales/en_us.dart (value equals
+  key) and bn_bd.dart. The exact block for each file is in the README.
+
+  STEP 4 - OPTIONAL, the demo route. See `routes` below.
+
+  STEP 5 - OPTIONAL, on sign-out. The outbox holds one account's unsent writes:
+      await Get.find<SyncService>().wipe();
+
+  STEP 6 - OPTIONAL, sync on reconnect via the connectivity_banner module:
+      sync.attachConnectivity(ConnectivityService.to.isOnline.stream);
+
+routes: |
+  Optional - the worked example screen only. In AppRoutes:
+    static const String NotesScreen = '/notesScreen';
+  In AppPages.pages:
+    _page(AppRoutes.NotesScreen, () => const NotesScreen()),
+  Both or neither: test/guardrails/routes_test.dart fails on a constant with no
+  GetPage. Deleting the whole lib/app/feature/notes folder is also fine - the
+  engine under lib/app/services/sync/ does not depend on it.
+
+bindings: >-
+  NotesController must be registered with _lazy (see setup step 2). SyncService
+  is a GetxService, not a screen controller - register it with Get.put(...,
+  permanent: true) in bootstrap.dart instead, which is what bindings_test.dart
+  expects.
+
+platform_config:
+  android: >-
+    minSdk 21 or higher (sqlite3_flutter_libs requires it). No manifest change,
+    no permission: the sqlite3 native library is bundled by the package. On
+    Android 6.0.1 and older, loading libsqlite3.so can fail - call
+    `await applyWorkaroundToOpenSqlite3OnOldAndroidVersions();` (from
+    package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart) in bootstrap before
+    the first query if you still support those devices.
+  ios: >-
+    Nothing. The package links sqlite3 statically. The database lives in
+    Application Support, which iOS includes in iCloud/iTunes backups - see the
+    README if unsynced rows must not leave the device.
+  notes: >-
+    The sqlite file is NOT encrypted. Anything sensitive should be encrypted
+    before it is written, or kept out of the offline store entirely. A rooted or
+    jailbroken device can read it.
+
+env: >-
+  None. The sync endpoints live in the module's own NotesApiConst, and hosts
+  still come from ApiConstant.activeBaseUrl.
+
+requires:
+  - lib/app/services/domain/api_service.dart
+  - lib/app/services/domain/api_const.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/widgets/appbar_widgets/appbar_widget.dart
+  - lib/app/widgets/buttons/custom_primary_button.dart
+  - lib/app/widgets/feedback/delete_confirmation_dialog.dart
+  - lib/app/widgets/inputs/custom_text_field.dart
+  - lib/app/widgets/layout/layout_components.dart
+  - lib/app/localization/locales/en_us.dart
+  - lib/app/localization/locales/bn_bd.dart
+
+optional_integration: >-
+  connectivity_banner - pass ConnectivityService.to.isOnline.stream to
+  SyncService.attachConnectivity() and the queue drains the moment the radio
+  comes back, instead of waiting for the next resume or retry timer.
+  api_resilience - complementary: it retries the HTTP call, this module retries
+  the mutation. Both are safe together because every push carries an
+  idempotency key. secure_storage - unrelated, but note the sync database is
+  plaintext sqlite while tokens are in the Keychain.
+
+notes: |
+  THIS MODULE CANNOT WORK CORRECTLY WITHOUT SERVER SUPPORT. The backend must
+  provide, per synced collection:
+    1. A monotonic `updated_at` on every row, set by the SERVER clock.
+    2. Idempotent writes keyed on `op_id` - the same op_id replayed must return
+       the first result, not apply a second time.
+    3. Tombstones: a delete must stay readable as `deleted: true` with its own
+       `updated_at`, or every client that was offline resurrects the row.
+    4. A pull endpoint filtered by `updated_at > since`, ideally returning the
+       server's own clock as `server_time`.
+  Without (2) a lost response double-creates. Without (3) deletes come back.
+
+  LAST-WRITE-WINS SILENTLY LOSES DATA. The default resolver compares
+  `updated_at` and keeps the newer whole row. Two devices editing DIFFERENT
+  fields of the same row means the older edit disappears - not merged, not
+  flagged, no error. Use FieldMergeResolver or ManualConflictResolver where that
+  is unacceptable, and read the README's Limitations section before shipping.
+
+  The idempotency key is sent in the request BODY as `op_id`, not as an
+  `Idempotency-Key` header: the template's ApiService exposes no per-request
+  headers. The README shows the small ApiService change if your server insists
+  on the header.
+
+  Pushes go through POST even for updates and deletes. ApiService.post is the
+  only verb that returns the error response; get/patch/put/delete swallow the
+  DioException and return null, which would make a 409 conflict
+  indistinguishable from a timeout.
+
+  test/unit/offline_first_test.dart has 28 tests over MemorySyncStore - no
+  drift, no sqlite, no network. Verified: the engine suite also passes
+  unchanged against DriftSyncStore on in-memory sqlite.

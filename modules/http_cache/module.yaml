@@ -1,0 +1,162 @@
+name: http_cache
+description: >-
+  HTTP response cache that follows the protocol instead of inventing one:
+  ETag / Last-Modified revalidation where a 304 serves the stored body as a
+  success, Cache-Control freshness (max-age, no-store, no-cache,
+  must-revalidate, private), Vary-aware cache keys, stale-while-revalidate,
+  and a sqflite store with a byte cap and LRU eviction. GET only, and never
+  under a key that omits the auth identity. Ships 60 tests.
+
+# Copy each path from modules/http_cache/<path> to <path> in the project.
+files:
+  - lib/app/services/domain/http_cache_policy.dart
+  - lib/app/services/domain/http_cache_store.dart
+  - lib/app/services/domain/sqflite_http_cache_store.dart
+  - lib/app/services/domain/http_cache_interceptor.dart
+  - lib/app/services/http_cache_service.dart
+  - test/unit/http_cache_test.dart
+
+dependencies:
+  sqflite: ^2.4.2
+
+optional_dependencies:
+  path_provider: ^2.1.5
+
+setup: |
+  1. lib/app/services/domain/api_service.dart - add the import next to the
+     existing relative imports:
+       import 'http_cache_interceptor.dart';
+
+     Then, in the ApiService constructor, immediately AFTER the closing `);`
+     of the token-refresh `_dio.interceptors.add(InterceptorsWrapper(...))`
+     block:
+
+       // Protocol cache: ETag/Last-Modified, Cache-Control, Vary, SWR.
+       _dio.interceptors.add(HttpCacheInterceptor(_dio));
+
+     ORDER MATTERS, three ways:
+       - AFTER the token-refresh wrapper, so the Authorization header is
+         already set when the cache computes the per-user cache key.
+       - BEFORE ApiResilienceInterceptor if that module is installed. A 304
+         arrives as a DioException, and Dio runs onError in registration
+         order: the cache must convert it to a success before resilience
+         sees it, or the coalesced followers get an error.
+       - BEFORE the kDebugMode PrettyDioLogger block. A cache hit resolves
+         inside onRequest, so it is never logged either way.
+
+  2. lib/bootstrap.dart - swap the default in-memory store for the persistent
+     one, right after `await CacheManager.init();`:
+
+       // HTTP response cache: persistent, 8 MB, LRU. Falls back to memory.
+       try {
+         HttpCache.use(
+           await SqfliteHttpCacheStore.open(maxBytes: 8 * 1024 * 1024),
+         );
+       } catch (e) {
+         devPrint('HttpCache: sqflite open failed, using memory: $e');
+       }
+
+     Skipping this step is safe: HttpCache defaults to MemoryHttpCacheStore,
+     so caching still works, just per process.
+
+  3. OPTIONAL but RECOMMENDED - keep one user's cache namespace stable across
+     token refreshes. Without it, a refreshed bearer token is a different
+     identity fingerprint and the whole cache for that user is orphaned. In
+     the token-refresh interceptor's onRequest, after the Authorization line:
+
+       // Keeps the cache namespace stable across token refreshes.
+       options.extra[HttpCachePolicy.identityExtra] ??=
+           CacheManager.getLoginEmail ?? '';
+
+     Use whatever stable per-user id your backend returns; an empty string
+     falls back to the token fingerprint. Never use a value that leaks
+     between accounts.
+
+  4. OPTIONAL - register the Rx service so a settings screen can show the
+     size / hit rate and offer a Clear button:
+       Get.put(HttpCacheService(), permanent: true);
+     It is a GetxService, not a screen controller, so nothing goes in
+     ViewModelBinding.
+
+  5. OPTIONAL - serve cached data while offline. ApiService.get() currently
+     returns null behind `if (!await checkInternet())`, which the cache never
+     sees. Replace that early return with a cache-only attempt - see the
+     README "Offline reads" section for the exact block.
+
+bindings: >-
+  Nothing to add to ViewModelBinding. HttpCacheService is a GetxService, so
+  test/guardrails/bindings_test.dart does not require it; register it with
+  Get.put(..., permanent: true) instead.
+
+routes: None added.
+
+platform_config: >-
+  None required. sqflite bundles its own Android and iOS/macOS
+  implementations - no manifest entry, no plist key, no permission. The
+  database lives in the app's own sandbox. Web is not supported by sqflite;
+  see notes.
+
+env: None. Sizes and windows are compile-time config, not .env keys.
+
+requires:
+  - lib/app/services/domain/api_service.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/services/local_data/cache_manager.dart
+
+optional_integration: |
+  api_resilience: complementary. Register HttpCacheInterceptor FIRST (see
+  setup step 1). A cache hit resolves in onRequest, so resilience never opens
+  a socket, never claims a dedup slot and never counts a breaker attempt for
+  it. With the default config (staleIfError: Duration.zero) the cache does
+  not swallow a network error, so resilience still retries as normal.
+
+  settings_ui: SettingsController exposes an onClearCache hook. Point it at
+  the cache in ViewModelBinding or in the screen's binding:
+    Get.find<SettingsController>().onClearCache = HttpCache.reset;
+
+  offline_first: different job. This module caches GET responses the server
+  said were cacheable; offline_first owns local writes and an outbox. They do
+  not share storage.
+
+notes: |
+  Vary is the dangerous part, which is why it is implemented rather than
+  skipped. A response to `Accept-Language: fr` must never answer an `en`
+  request, and a response to one user's `Authorization` must never answer
+  another's. Entries are filed under a primary key (method + canonical url +
+  auth identity) and selected by the Vary-named request headers. `Vary: *` is
+  never stored.
+
+  The auth identity is an explicit `extra['cacheIdentity']` when you set one,
+  otherwise a non-cryptographic 64-bit fingerprint of the Authorization /
+  Cookie / X-Api-Key header. The raw credential is never written to disk.
+  Anonymous requests share the 'anon' namespace.
+
+  GET only by default. A POST response is not safe to replay, and replaying
+  it is how a client shows a stale order total after a write.
+
+  304 Not Modified is returned to the caller as a 200 with the stored body
+  and `response.extra['revalidated'] == true`. Dio's default validateStatus
+  sends 304 to onError, so the interceptor converts it there - no caller
+  ever sees a 304 as a failure.
+
+  A response with neither freshness info (max-age / Expires) nor a validator
+  (ETag / Last-Modified) is not stored. Set HttpCacheConfig.defaultMaxAge if
+  your backend sends no cache headers at all and you want a client-side TTL
+  anyway - that is a guess about your API, so it is off by default.
+
+  The store is byte-capped (default 8 MB) and evicts least-recently-used
+  rows. `size` is body bytes plus stored header bytes, not the on-disk page
+  size, so SQLite's own file will be somewhat larger than the cap.
+
+  The database is disposable: a schema version bump DROPs the table instead
+  of migrating it.
+
+  The 60 tests in test/unit/http_cache_test.dart run against
+  MemoryHttpCacheStore and a fake HttpClientAdapter - no plugin, no network.
+  SqfliteHttpCacheStore needs the native plugin, so it is only exercised on a
+  device or simulator; sqflite_common_ffi would be needed to test it on the
+  host.
+
+  HttpCacheMetrics counters and the HttpCache store are static, because this
+  template constructs a new ApiService() - and a new Dio - per call.
+  HttpCache.reset() clears both; call it on sign-out.

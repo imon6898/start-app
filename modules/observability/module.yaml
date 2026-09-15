@@ -1,0 +1,154 @@
+name: observability
+description: >-
+  Production observability: a leveled structured logger that emits JSON records
+  and scrubs PII before any sink sees them, a Dio interceptor that stamps a W3C
+  traceparent on every request so client calls can be joined to backend spans,
+  and a frame-timing monitor that reports jank, time-to-interactive and named
+  spans. Counters are mirrored into Rx for a debug overlay. No new packages.
+
+# Copy each path from modules/observability/<path> to <path> in the project.
+files:
+  - lib/app/services/observability/log_record.dart
+  - lib/app/services/observability/log_redactor.dart
+  - lib/app/services/observability/app_logger.dart
+  - lib/app/services/observability/trace_interceptor.dart
+  - lib/app/services/observability/perf_monitor.dart
+  - lib/app/services/observability_service.dart
+  - lib/app/widgets/feedback/observability_overlay.dart
+  - test/unit/observability_test.dart
+
+# No new packages. dio, get and lucide_icons_flutter are already in core.
+
+setup: |
+  Nothing here is required - every piece degrades to a no-op on its own. Add
+  the parts you want.
+
+  1. lib/bootstrap.dart - the logger and the Rx counters, after
+     `await CacheManager.init();`:
+
+       Get.put(ObservabilityService(), permanent: true);
+       AppLogger.context['flavor'] = AppFlavor.name;
+       PerfMonitor.start();
+
+     Imports - note bootstrap.dart does NOT import get today:
+       import 'package:get/get.dart';
+       import 'app/core/config/app_flavor.dart';   // only for the flavor field
+       import 'app/services/observability/app_logger.dart';
+       import 'app/services/observability/perf_monitor.dart';
+       import 'app/services/observability_service.dart';
+
+  2. lib/bootstrap.dart - route the handlers the file already has into the
+     logger. Replace the devPrint body of FlutterError.onError with:
+
+       AppLogger.error(
+         details.exceptionAsString(),
+         logger: 'flutter',
+         error: details.exception,
+         stack: details.stack,
+       );
+
+     and the runZonedGuarded handler with:
+
+       (error, stack) => AppLogger.error('uncaught', error: error, stack: stack),
+
+     Then DELETE the now-unused import of app/services/domain/dev_tools.dart -
+     unused_import is an error in this repo's lint set.
+
+     Keep devPrint instead if crash_analytics is installed and you would rather
+     not have two things writing the same line.
+
+  3. lib/app/services/domain/api_service.dart - tracing. Add the import:
+       import '../observability/trace_interceptor.dart';
+
+     Then in the ApiService constructor, AFTER the token-refresh
+     InterceptorsWrapper block and BEFORE the `if (kDebugMode)` logger block:
+
+       // traceparent per request + one structured line per call.
+       _dio.interceptors.add(TraceInterceptor());
+
+  4. lib/app/app.dart - the debug overlay, if you want it:
+       builder: ObservabilityOverlay.builder(),
+
+  5. Optional - call PerfMonitor.markInteractive() from the first screen that
+     has finished loading its real content, so time-to-interactive means
+     something:
+       PerfMonitor.markInteractive(route: AppRoutes.HomeScreen);
+
+bindings: >-
+  Nothing goes in ViewModelBinding. ObservabilityService is a GetxService, not a
+  screen controller, so test/guardrails/bindings_test.dart does not ask for it -
+  register it with Get.put(ObservabilityService(), permanent: true) instead.
+  Every static reporter no-ops while it is unregistered, so tests that skip
+  bootstrap() keep passing.
+
+routes: None added. This module ships no screens.
+
+platform_config: >-
+  None required - no native code, no permissions, no .env keys. If you point a
+  sink at an HTTP collector, Android release builds need
+  android.permission.INTERNET in the manifest (the template ships none).
+
+requires:
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/services/domain/api_service.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/responsive_utils.dart
+
+optional_integration: >-
+  crash_analytics owns error REPORTING; this module owns logging, tracing and
+  frame timing. They do not overlap and neither installs the other's hooks. To
+  join them, add a sink that forwards warn/error records as breadcrumbs:
+  class CrashBreadcrumbSink implements LogSink { void write(LogRecord r) { if
+  (r.level.index >= LogLevel.warn.index) CrashService.to.addBreadcrumb(r.message,
+  category: r.logger, data: r.fields); } Future<void> flush() async {} }
+  Records are already redacted, so Sentry's scrubber sees clean input.
+
+  api_resilience replays requests through _dio.fetch(); TraceInterceptor detects
+  the replay and gives it a new span id under the same trace id, so a retry
+  storm is visible as one trace instead of four unrelated ones.
+
+notes: |
+  What the redaction list strips, exactly. Field names are matched two ways:
+  a *token* match (name split on _ - . and camelCase) against auth, jwt, pwd,
+  pin, otp, ssn, cvv, cvc, iban, card, mail, session, signature, address, lat,
+  lng, latitude, longitude; and a *substring* match against token,
+  authorization, authorisation, password, passwd, secret, credential, bearer,
+  apikey, api_key, cookie, email, phone, mobile, msisdn. Values are rewritten
+  by regex: `Bearer <anything>`, JWTs (`eyJ....`), email addresses,
+  international phone numbers (`+44 20 7946 0958`) and any run of nine or more
+  digits. The digit rule also hits epoch-millis and long numeric ids - that is
+  the trade-off for catching unformatted phone and card numbers.
+
+  Stack traces are NOT scrubbed; only messages, errors and fields are. Frames
+  carry file paths and symbols, not user data, but a message you interpolated
+  into an exception will already have been scrubbed at the message level only.
+
+  The traceparent header is inert unless your BACKEND reads it. Format:
+  00-<32 hex trace-id>-<16 hex span-id>-01. The client is the root of the trace;
+  the server must continue it (OpenTelemetry, Datadog and Sentry all parse this
+  header natively) or the ids correlate with nothing.
+
+  Frame jank is measured as buildDuration + rasterDuration from
+  SchedulerBinding.addTimingsCallback, against a 16ms budget (60Hz). Set
+  PerfMonitor.frameBudget = Duration(milliseconds: 8) on a 120Hz target. Debug
+  builds are 2-10x slower than release - only profile/release numbers mean
+  anything.
+
+  Time-to-interactive is measured from PerfMonitor.start() in bootstrap, so it
+  excludes native/engine startup (process fork, Dart VM boot, first Flutter
+  engine frame). For the number a store listing cares about, measure on the
+  platform side instead.
+
+  ObservabilityService publishes frame counters at most every 500ms
+  (publishInterval) because an overlay that rebuilt every frame would be the
+  jank it reports. recentLogs keeps 50 records in memory and is never persisted.
+
+  test/unit/observability_test.dart covers redaction, level filtering, the
+  traceparent shape and parser, replay/span behaviour against a fake Dio
+  adapter, jank classification with synthetic FrameTiming values, spans and the
+  service counters - 43 tests, no network.
+
+  Verified: installed into a clean checkout of b83425e with the wiring above
+  applied verbatim - flutter analyze reports no issues and flutter test passes
+  88 tests (45 existing + 43 from this module).

@@ -1,0 +1,161 @@
+name: design_system
+description: >-
+  A design-token layer on top of the template's existing helpers, plus a
+  debug-only component catalog. tokens.json is the single source of truth;
+  tool/gen_tokens.dart regenerates typed Dart from it, so a Figma Variables
+  export can drive spacing, radius, elevation, motion and semantic colour
+  roles. Tokens are reachable statically (DsSpace.lg) and through
+  Theme.of(context) (context.ds). CustomColors, CustomTextStyles and R are
+  extended, never replaced.
+
+# Copy each path from modules/design_system/<path> to <path> in the project.
+files:
+  # Token layer
+  - lib/app/themes/tokens/tokens.json
+  - lib/app/themes/tokens/token_types.dart
+  - lib/app/themes/tokens/design_tokens.dart
+  - lib/app/themes/tokens/ds_resolve.dart
+  - lib/app/themes/tokens/ds_tokens_theme.dart
+  - lib/app/themes/tokens/tokens.dart
+  - lib/app/themes/ds_theme.dart
+  # Component catalog (debug-only screen)
+  - lib/app/feature/catalog/catalog_route.dart
+  - lib/app/feature/catalog/catalog_models/catalog_entry.dart
+  - lib/app/feature/catalog/catalog_controllers/catalog_controller.dart
+  - lib/app/feature/catalog/catalog_presentation/catalog_registry.dart
+  - lib/app/feature/catalog/catalog_presentation/catalog_screen.dart
+  - lib/app/feature/catalog/catalog_presentation/catalog_tokens_view.dart
+  - lib/app/feature/catalog/catalog_presentation/catalog_widgets/catalog_case.dart
+  - lib/app/feature/catalog/catalog_presentation/catalog_widgets/catalog_toolbar.dart
+  # Generator + tests
+  - tool/gen_tokens.dart
+  - test/guardrails/design_tokens_test.dart
+  - test/guardrails/catalog_coverage_test.dart
+  - test/widget/ds_tokens_test.dart
+  - test/widget/catalog_screen_test.dart
+
+# No new packages. flutter, get and lucide_icons_flutter are already in core.
+
+setup: |
+  The token layer works the moment it lands - DsSpace.lg, DsRole.accent() and
+  DsElevation.low.value need no registration. Two edits are only needed for the
+  extras:
+
+  1. REQUIRED for the catalog - lib/app/bindings/view_model_binding.dart.
+     Add the import:
+       import '../feature/catalog/catalog_controllers/catalog_controller.dart';
+     and one line inside dependencies():
+       // Catalog (debug only; registration is cheap and lazy)
+       _lazy<CatalogController>(() => CatalogController());
+     test/guardrails/bindings_test.dart fails without it: every *Controller
+     under lib/app/feature/ must appear in ViewModelBinding.
+
+  2. REQUIRED for the catalog - lib/app/routes/app_pages.dart.
+     Add the imports:
+       import 'package:flutter/foundation.dart';
+       import '../feature/catalog/catalog_presentation/catalog_screen.dart';
+       import '../feature/catalog/catalog_route.dart';
+     and one entry at the end of AppPages.pages:
+       // Debug-only storybook; the collection-if drops it from release builds.
+       if (kDebugMode)
+         _page(CatalogRoutes.CatalogScreen, () => const CatalogScreen()),
+     The route name lives in CatalogRoutes, not AppRoutes, so
+     test/guardrails/routes_test.dart stays green with no edit to app_routes.dart.
+
+  3. OPTIONAL - lib/app/app.dart, to reach tokens through Theme.of(context).
+     Add the import:
+       import 'themes/ds_theme.dart';
+     and wrap the two existing theme lines inside GetMaterialApp:
+       theme: DsTheme.withTokens(AppTheme.lightTheme),
+       darkTheme: DsTheme.withTokens(AppTheme.darkTheme),
+     Use withTokens(), not DsTheme.light/.dark: it keeps the AppTheme import in
+     use, and unused_import is an ERROR in this repo's analysis_options.yaml.
+     Skipping this step costs nothing: context.ds falls back to the static token
+     set for the ambient brightness.
+
+  4. Regenerate the Dart after editing tokens.json:
+       dart run tool/gen_tokens.dart
+       dart run tool/gen_tokens.dart --check   # CI: fails when stale
+
+routes: >-
+  Nothing is added to AppRoutes. The catalog's route name is
+  CatalogRoutes.CatalogScreen ('/catalogScreen') in
+  lib/app/feature/catalog/catalog_route.dart, and its GetPage goes into
+  AppPages.pages behind `if (kDebugMode)`. Open it with
+  Get.toNamed(CatalogRoutes.CatalogScreen).
+
+bindings: >-
+  CatalogController must be registered in ViewModelBinding with
+  _lazy<CatalogController>(() => CatalogController()) - it is a feature
+  controller, so the bindings guardrail requires it even though the screen is
+  debug-only. The token layer itself registers nothing.
+
+platform_config: None required - no native code, no permissions, no new assets.
+
+env: None. Tokens are compile-time constants, not configuration.
+
+requires:
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/themes/app_theme.dart
+  - lib/app/themes/theme_controller.dart
+  - lib/app/localization/app_translations.dart
+  - lib/app/core/helpers/pagination_helper.dart
+  - lib/app/core/enums/enums.dart
+  - lib/app/utils/constants/app_assets.dart
+  - lib/app/widgets/widgets.dart
+  - lib/app/bindings/view_model_binding.dart
+  - lib/app/routes/app_pages.dart
+
+optional_integration: >-
+  Any module that adds widgets to lib/app/widgets/ (adaptive_layout,
+  extra_widgets, api_resilience's banner, html_view, webview, media_viewer)
+  will trip
+  test/guardrails/catalog_coverage_test.dart until its widgets get a
+  CatalogEntry. That is deliberate - a partial storybook is worse than none -
+  but it is a real cost. Add the entries, or delete that one test file.
+
+notes: |
+  tokens.json is NOT bundled as a Flutter asset and is never read at runtime. It
+  is codegen input only, so there is nothing to add under `assets:` in
+  pubspec.yaml and no I/O on the first-frame path.
+
+  Colour tokens come in two flavours, on purpose. "colorAlias" entries point at
+  an existing CustomColors method, so app_colors.dart stays the one place a
+  brand hex is written and dark mode keeps working. "colorRole" entries carry an
+  explicit light/dark hex pair, for roles the core palette has no method for
+  (focus ring, scrim, skeleton shimmer). The generator refuses an alias whose
+  CustomColors method does not exist.
+
+  Spacing, radius and icon sizes are RAW Figma px. Pass them to R.pad/R.margin
+  as-is (R.pad(all: DsSpace.lg)) and wrap them in R.h()/R.w()/R.r() anywhere
+  else. Border widths are deliberately NOT scaled - a scaled hairline
+  disappears. Nothing in this module calls R.pad(horizontal: R.w(...)), which
+  the responsive guardrail forbids.
+
+  The catalog's own chrome is English, not `.tr`. It is developer copy, and
+  test/guardrails/localization_test.dart requires every `.tr` literal in lib/ to
+  have an en_US entry AND every en_US entry to be used - so translating the
+  storybook would push catalog-only strings into every locale file. The widget
+  demos still show real translated copy because the locale toggle switches the
+  whole app.
+
+  The light/dark and locale toggles are GLOBAL, not per preview. CustomColors
+  resolves through Get.find<ThemeController>() and `.tr` resolves through
+  Get.locale, so a local Theme or Localizations override would not reach the
+  widgets - side-by-side light/dark is impossible without rewriting
+  CustomColors. CatalogController records the theme and locale in onInit and
+  restores them in onClose, so popping the screen leaves the app as it was.
+  Only the text-scale toggle is local (a MediaQuery textScaler override).
+
+  design_tokens.dart is generated and starts with a "do not edit" banner.
+  test/guardrails/design_tokens_test.dart regenerates it in-memory and compares,
+  so a hand edit fails the suite rather than surviving until the next run.
+
+  23 tests ship with the module: token/generator sync, catalog coverage, the
+  ThemeExtension fallback, and a smoke test that builds all 28 demos. The smoke
+  test runs at the default text scale on purpose - at 2.0x, seven widgets in the
+  kit genuinely overflow (CustomButton, CustomOutlinedButton, CustomSnackBar,
+  StatusBadge, DatePickerButton and the two trigger buttons). That is the
+  catalog doing its job; asserting "no overflow" would only hide it.

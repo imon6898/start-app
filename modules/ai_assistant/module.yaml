@@ -1,0 +1,143 @@
+name: ai_assistant
+description: >-
+  Claude API client for Flutter: streaming chat with tool use, built on the
+  template's existing dio - no new packages. Ships a proxy client that talks to
+  YOUR backend (which holds the Anthropic key, authenticates your user and
+  enforces quota), a debug-only direct client that refuses to run in release, a
+  byte-safe SSE parser, a capped tool-use loop, and a streaming chat screen.
+
+# Copy each path from modules/ai_assistant/<path> to <path> in the project.
+files:
+  - lib/app/feature/ai_assistant/ai_assistant_models/claude_message.dart
+  - lib/app/feature/ai_assistant/ai_assistant_models/claude_response.dart
+  - lib/app/feature/ai_assistant/ai_assistant_models/claude_tool.dart
+  - lib/app/feature/ai_assistant/ai_assistant_logic/claude_api_const.dart
+  - lib/app/feature/ai_assistant/ai_assistant_logic/claude_api_service.dart
+  - lib/app/feature/ai_assistant/ai_assistant_logic/claude_sse_parser.dart
+  - lib/app/feature/ai_assistant/ai_assistant_logic/claude_tool_runner.dart
+  - lib/app/feature/ai_assistant/ai_assistant_controllers/chat_controller.dart
+  - lib/app/feature/ai_assistant/ai_assistant_presentation/chat_screen.dart
+  - test/unit/claude_sse_parser_test.dart
+
+# No new packages. dio, get, flutter_dotenv and lucide_icons_flutter are core.
+
+env: |
+  All optional - the module runs with zero .env changes, talking to
+  ApiConstant.activeBaseUrl at /ai/claude/messages. Add placeholders to
+  .env.example for whichever you use:
+
+    CLAUDE_PROXY_URL=          # your AI host, if it is not the main BASE_URL
+    CLAUDE_PROXY_PATH=/ai/claude/messages
+    CLAUDE_MODEL=claude-opus-5 # never append a date suffix to a model id
+    ANTHROPIC_API_KEY=         # DEBUG ONLY - ClaudeDirectClient. Do not ship.
+
+  Read through ClaudeApiConstant only; no Env getter needs adding, because the
+  module uses Env.optional(...).
+
+setup: |
+  1. lib/app/routes/app_routes.dart - add the constant:
+       static const String ChatScreen = '/chatScreen';
+
+  2. lib/app/routes/app_pages.dart - add the import and the GetPage:
+       import '../feature/ai_assistant/ai_assistant_presentation/chat_screen.dart';
+
+       GetPage(name: AppRoutes.ChatScreen, page: () => const ChatScreen()),
+
+  3. lib/app/bindings/view_model_binding.dart - add the import and register the
+     controller under a `// AI assistant` comment:
+       import '../feature/ai_assistant/ai_assistant_controllers/chat_controller.dart';
+
+       _lazy<ChatController>(() => ChatController());
+
+  4. lib/app/localization/locales/en_us.dart AND bn_bd.dart - append the same
+     14 keys to BOTH files (the localization guardrail requires key parity, and
+     every .tr string to have an en_US entry). Verbatim block in the README's
+     Wiring section, step 4.
+
+  5. Nothing else. There is no bootstrap step, no service to Get.put, and no
+     new package.
+
+  6. Open it with:  Get.toNamed(AppRoutes.ChatScreen);
+
+routes: >-
+  AppRoutes.ChatScreen = '/chatScreen', plus the matching GetPage in
+  AppPages.pages. Both guardrail tests (routes_test, bindings_test) require the
+  route constant, the GetPage and the ViewModelBinding entry together.
+
+bindings: >-
+  ChatController in ViewModelBinding via _lazy<ChatController>(() =>
+  ChatController()) - the template's helper already passes fenix: true.
+
+platform_config: >-
+  None beyond INTERNET, which the template already declares. No native code, no
+  plist keys, no console setup. Your BACKEND needs the Anthropic key and a
+  streaming-capable endpoint - see the README's Backend contract section.
+
+requires:
+  - lib/app/localization/locales/en_us.dart
+  - lib/app/localization/locales/bn_bd.dart
+  - lib/app/core/config/env.dart
+  - lib/app/services/domain/api_const.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/services/local_data/cache_manager.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/widgets/appbar_widgets/appbar_widget.dart
+  - lib/app/widgets/buttons/custom_primary_button.dart
+  - lib/app/widgets/feedback/custom_snack_bar.dart
+  - lib/app/widgets/feedback/thinking_dots.dart
+  - lib/app/widgets/inputs/custom_text_field.dart
+
+optional_integration: >-
+  api_resilience: harmless together. Its interceptor lives on the core
+  ApiService's Dio; this module builds its own Dio, so a streamed turn is never
+  retried or deduped behind your back. connectivity_banner: check
+  ConnectivityService.isOnline before calling send() to fail fast offline.
+
+notes: |
+  SECURITY - the defining constraint. An Anthropic API key inside an app binary
+  is EXTRACTABLE. Anyone who pulls your APK can spend your Anthropic budget
+  without limit, and you will not find out until the invoice. So the default and
+  documented path is:
+
+    Flutter app -> YOUR backend (key + auth + per-user quota) -> api.anthropic.com
+
+  ClaudeProxyClient (the default) implements that. ClaudeDirectClient talks to
+  api.anthropic.com with a key from .env, asserts kDebugMode, throws a
+  StateError outside a debug build, and logs a loud warning. Shipping it is a
+  financial-loss bug, not a style preference.
+
+  Per-user rate limiting cannot be enforced by the client. A patched app skips
+  any client-side cap, so the quota has to live on your backend, keyed by your
+  authenticated user.
+
+  Prompt injection: text you feed the model is not trusted input. If a tool
+  handler can write, spend or delete, gate it behind a confirmation instead of
+  executing whatever the model asks for.
+
+  API facts this client encodes (they are easy to get wrong):
+  - There is no official Anthropic Dart/Flutter SDK. This is raw HTTP over dio.
+  - Default model is claude-opus-5. Never append a date suffix to a model id.
+  - thinking: {"type":"adaptive"} only. budget_tokens is REMOVED and returns
+    400. On claude-opus-5 thinking is ON by default, so the field is omitted
+    unless you want a summary (display: "summarized") or an explicit opt-out.
+  - {"type":"disabled"} is accepted only at effort high or lower; the Repo
+    throws an ArgumentError before the request rather than letting the API 400.
+  - temperature / top_p / top_k are REMOVED on claude-opus-5 and return 400 -
+    the body builder never emits them.
+  - effort goes in output_config, not top-level.
+  - max_tokens is required and caps thinking + text together: 16000
+    non-streaming, 64000 streaming.
+  - stop_reason is checked BEFORE content is read. On a refusal, content can be
+    empty or partial, so content[0] would crash. pause_turn re-sends the
+    assistant turn to resume and never appends a "Continue" user message.
+  - All tool_results for one turn go in a SINGLE user message; a failed tool
+    still returns its tool_result with is_error: true.
+  - The API is stateless: the whole conversation is resent every request, so
+    thinking blocks round-trip unchanged and unknown block types are preserved.
+
+  test/unit/claude_sse_parser_test.dart covers the SSE parser (including a data
+  line split mid-chunk and a multi-byte character split byte-by-byte), the
+  accumulator, partial tool-input JSON, refusal handling and the request-body
+  rules. 19 tests, no network.

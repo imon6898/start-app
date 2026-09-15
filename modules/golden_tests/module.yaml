@@ -1,0 +1,137 @@
+name: golden_tests
+description: >-
+  Visual-regression and integration test infrastructure: golden (screenshot)
+  tests for the shared widgets across a phone/tablet x light/dark x text-scale
+  matrix, a loadAppFonts() helper so text renders as text instead of Ahem boxes,
+  a real device end-to-end flow on IntegrationTestWidgetsFlutterBinding, and a
+  network-free mock/fixture kit for controller and repo tests.
+
+# Copy each path from modules/golden_tests/<path> to <path> in the project.
+files:
+  - test/golden/golden_harness.dart
+  - test/golden/flutter_test_config.dart
+  - test/golden/buttons_golden_test.dart
+  - test/golden/inputs_golden_test.dart
+  - test/golden/feedback_golden_test.dart
+  - test/helpers/test_bootstrap.dart
+  - test/helpers/mock_api_service.dart
+  - test/helpers/fixtures.dart
+  - test/fixtures/login_success.json
+  - test/fixtures/login_unverified.json
+  - test/fixtures/login_error.json
+  - test/unit/auth_fixture_test.dart
+  - integration_test/app_boot_flow_test.dart
+  - tool/update_goldens.sh
+
+# dev_dependencies ONLY. The installer appends to `dependencies:`, so these must
+# be moved by hand - see the README.
+dependencies: {}
+
+optional_dependencies:
+  mocktail: "^1.0.5  -> dev_dependencies"
+  integration_test: "sdk: flutter  -> dev_dependencies"
+
+setup: |
+  1. pubspec.yaml - these are DEV dependencies. The installer only writes to the
+     `dependencies:` block, so add them under `dev_dependencies:` yourself:
+
+       dev_dependencies:
+         flutter_test:
+           sdk: flutter
+         integration_test:
+           sdk: flutter
+         mocktail: ^1.0.5
+
+     Then: flutter pub get
+
+  2. chmod +x tool/update_goldens.sh
+
+  3. Generate the goldens. The module ships NO .png files - the first run has
+     nothing to compare against, so create the baseline and eyeball it:
+
+       tool/update_goldens.sh
+       git status --short test/golden
+
+  4. From then on:  flutter test          (goldens run with everything else)
+
+  5. Nothing in lib/ changes. One OPTIONAL one-line core edit makes a Repo
+     mockable - see "Wiring" in the README.
+
+bindings: >-
+  Nothing. No controller, no service, no route. Every file lands under test/,
+  integration_test/ or tool/.
+
+routes: None added.
+
+platform_config: >-
+  None for the golden tests - they are pure `flutter test`. The
+  integration_test/ suite needs a connected device or emulator: run it with
+  `flutter test integration_test/app_boot_flow_test.dart -d <device>`, never
+  plain `flutter test`.
+
+env: >-
+  None of its own. test/helpers/test_bootstrap.dart calls Env.load(), so the
+  project's .env must exist (it already must for the app to boot).
+
+requires:
+  - lib/app/app.dart
+  - lib/app/bindings/view_model_binding.dart
+  - lib/app/core/config/env.dart
+  - lib/app/core/models/base_response.dart
+  - lib/app/feature/auth/auth_logic/auth_api_service.dart
+  - lib/app/feature/auth/auth_models/auth_response.dart
+  - lib/app/feature/auth/auth_presentation/signin_screen.dart
+  - lib/app/feature/placeholder/placeholder_screen.dart
+  - lib/app/feature/splash/splash_presentation/splash_screen.dart
+  - lib/app/localization/app_translations.dart
+  - lib/app/routes/app_routes.dart
+  - lib/app/services/local_data/cache_manager.dart
+  - lib/app/themes/app_theme.dart
+  - lib/app/themes/theme_controller.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/utils/validator.dart
+  - lib/app/widgets/buttons/custom_primary_button.dart
+  - lib/app/widgets/feedback/status_badge.dart
+  - lib/app/widgets/feedback/striped_progress_bar.dart
+  - lib/app/widgets/feedback/thinking_dots.dart
+  - lib/app/widgets/inputs/custom_text_field.dart
+
+notes: |
+  GOLDENS ARE PLATFORM-SPECIFIC. The same widget rasterises differently on
+  macOS, Linux and Windows - font hinting and anti-aliasing differ. A set
+  generated on a Mac will fail on a Linux CI runner for reasons that have
+  nothing to do with your code. This module files them per OS
+  (test/golden/goldens/<os>/), so CI either runs on the same OS you generate
+  on, or generates its own set. Pick one and say so in the README of your app.
+
+  No golden package is used. Neither golden_toolkit nor alchemist is present in
+  this machine's pub cache, so their APIs could not be verified - and both would
+  be a new dependency for behaviour flutter_test already has. The harness uses
+  flutter_test's matchesGoldenFile plus about 80 lines of helper.
+
+  loadAppFonts() is the classic gotcha. `flutter test` starts with only the
+  placeholder "FlutterTest" font registered, so every `TextStyle(fontFamily:
+  'Inter')` - which is every CustomTextStyles entry - and every Lucide/Material
+  glyph draws as a filled box. The helper reads FontManifest.json out of the
+  test asset bundle and FontLoader-s each family, keeping package fonts
+  namespaced as `packages/<pkg>/<Family>` so TextStyle still finds them.
+
+  There is no HTTP seam below the Repo. AuthImpl constructs ApiService()
+  inline, and ApiService.get/post call checkInternet(), which does a live
+  InternetAddress.lookup('google.com'). A test must therefore mock the abstract
+  <Name>ApiService, never ApiService - see test/helpers/mock_api_service.dart.
+
+  test/golden/flutter_test_config.dart applies to test/golden/ only. flutter
+  runs the nearest such file above each test file, so the existing suites are
+  untouched and keep their exact-compare behaviour.
+
+  GOLDEN_TOLERANCE=0.5 swaps in a comparator that allows 0.5% of pixels to
+  differ. Unset (the default) means flutter's exact pixel compare. Tolerance
+  hides real regressions - use it to survive a CI image upgrade, not as a
+  permanent setting.
+
+  Animated widgets: pumpAndSettle never returns for an AnimationController that
+  repeat()s (ThinkingDots, and CustomButton while loading). Those goldens pass
+  settle: false and pump a fixed slice instead, which makes the frame they
+  capture timing-dependent.

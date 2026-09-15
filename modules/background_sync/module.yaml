@@ -1,0 +1,212 @@
+name: background_sync
+description: >-
+  Background execution over workmanager: periodic, one-off and iOS processing
+  tasks that survive app termination, with network / charging / battery-not-low
+  constraints, a top-level @pragma('vm:entry-point') dispatcher, a handler
+  registry that re-initialises the background isolate from scratch, and a
+  SharedPreferences mailbox so the UI can show what the last run did. iOS gives
+  NO guaranteed periodic execution and Android's floor is 15 minutes - design
+  for eventual, not timely, delivery. Ships 15 tests.
+
+# Copy each path from modules/background_sync/<path> to <path> in the project.
+files:
+  - lib/app/services/background/background_task_ids.dart
+  - lib/app/services/background/background_policy.dart
+  - lib/app/services/background/background_run_log.dart
+  - lib/app/services/background/background_handlers.dart
+  - lib/app/services/background/background_dispatcher.dart
+  - lib/app/services/background/background_task_service.dart
+  - lib/app/widgets/feedback/background_sync_tile.dart
+  - test/unit/background_sync_test.dart
+
+dependencies:
+  workmanager: "^0.10.10"
+
+setup: |
+  STEP 1 - lib/bootstrap.dart. Add the imports:
+      import 'package:get/get.dart';
+      import 'app/services/background/background_task_service.dart';
+
+  Then inside bootstrap(), AFTER `await CacheManager.init();` (the handlers read
+  CacheManager) and BEFORE `ViewModelBinding().dependencies();`:
+
+      // Background execution. initialize() only registers the entry point; it
+      // schedules nothing on its own.
+      final background = await Get.putAsync(
+        () => BackgroundTaskService().init(),
+        permanent: true,
+      );
+      // Safe on every launch: the Android policy is `update`, which keeps the
+      // existing period instead of restarting it.
+      unawaited(
+        background.schedulePeriodicSync(frequency: const Duration(hours: 1)),
+      );
+
+  `unawaited` is already imported in bootstrap.dart (dart:async).
+
+  STEP 2 - REQUIRED. Write the real work into
+  lib/app/services/background/background_handlers.dart. It ships three handlers
+  with TODO bodies. That file is the module's whole point: everything in it runs
+  in the BACKGROUND isolate, where Get, controllers and in-memory caches do not
+  exist.
+
+  STEP 3 - REQUIRED if you keep background_sync_tile.dart. Add these 7 keys to
+  BOTH lib/app/localization/locales/en_us.dart and bn_bd.dart, or
+  test/guardrails/localization_test.dart fails:
+      'Background sync', 'Never run', 'Run now', 'Succeeded', 'Will retry',
+      'Failed', 'Stopped by the system'
+  The exact block for each file is in the README. Deleting the widget instead is
+  fine - nothing under lib/app/services/background/ imports it.
+
+  STEP 4 - OPTIONAL, on sign-out. A queued task still holds the previous
+  account's work:
+      await Get.find<BackgroundTaskService>().cancelAll();
+
+  STEP 5 - OPTIONAL, the widget barrel. To reach the tile through
+  package:flutter_starter/app/widgets/widgets.dart, add to
+  lib/app/widgets/feedback/feedback.dart:
+      export 'background_sync_tile.dart';
+
+bindings: >-
+  Nothing goes in ViewModelBinding. BackgroundTaskService is a GetxService, not
+  a screen controller, so test/guardrails/bindings_test.dart does not ask for
+  it - register it with Get.putAsync(..., permanent: true) in bootstrap.dart.
+
+routes: None added.
+
+platform_config:
+  android: |
+    1. android/app/src/main/AndroidManifest.xml - release builds need INTERNET
+       (only the debug and profile manifests declare it today). Above
+       <application>:
+         <uses-permission android:name="android.permission.INTERNET"/>
+
+    2. minSdk 23 or higher - workmanager_android requires it. The Flutter
+       default (flutter.minSdkVersion) already satisfies this.
+
+    3. Nothing else, and be aware of what arrives on its own: the plugin's own
+       manifest is merged into yours and it declares POST_NOTIFICATIONS,
+       FOREGROUND_SERVICE and FOREGROUND_SERVICE_SHORT_SERVICE. androidx.work
+       adds WAKE_LOCK and RECEIVE_BOOT_COMPLETED, which is what reschedules
+       periodic work after a reboot. No custom Application class is needed.
+
+    4. DO NOT disable androidx.startup's InitializationProvider. Some plugin
+       guides tell you to add tools:node="remove" to it; that stops WorkManager
+       from ever initialising and no task will run.
+  ios: |
+    1. ios/Runner/Info.plist - both keys, or iOS refuses the identifiers:
+         <key>UIBackgroundModes</key>
+         <array>
+           <string>fetch</string>
+           <string>processing</string>
+         </array>
+         <key>BGTaskSchedulerPermittedIdentifiers</key>
+         <array>
+           <string>com.easital.starter.periodicSync</string>
+           <string>com.easital.starter.processing</string>
+         </array>
+       These must equal the uniqueName constants in BackgroundTasks.
+
+    2. Xcode > Runner target > Signing & Capabilities > + Capability >
+       Background Modes, then tick "Background fetch" and "Background
+       processing".
+
+    3. ios/Runner/AppDelegate.swift - TWO required lines, full file in the
+       README. This project uses the UIScene lifecycle (Info.plist has
+       UIApplicationSceneManifest and a SceneDelegate), so the plugin cannot
+       re-register its BGTaskScheduler launch handlers itself:
+         WorkmanagerPlugin.registerLaunchHandlers()
+         WorkmanagerPlugin.setPluginRegistrantCallback { registry in
+           GeneratedPluginRegistrant.register(with: registry)
+         }
+       Without registerLaunchHandlers() a relaunched app never receives its
+       scheduled task. Without setPluginRegistrantCallback the background engine
+       has no plugins, so SharedPreferences and Dio fail inside every handler.
+
+    4. Background tasks do not fire on the simulator on their own. Use the LLDB
+       _simulateLaunchForTaskWithIdentifier trick in the README.
+  notes: >-
+    iOS gives NO guaranteed periodic execution. BGTaskScheduler decides when,
+    based on how the user actually uses the app, and it may decide never. On iOS
+    a one-off task is not real background work at all: it rides
+    UIApplication.beginBackgroundTask, so it dies with the app. Android's
+    minimum periodic frequency is 15 minutes and Doze / App Standby can stretch
+    it to hours. Never build a feature whose correctness depends on a background
+    task having run.
+
+env: >-
+  None. The handlers call Env.load() again in the background isolate because
+  dotenv is per-isolate - see the README.
+
+requires:
+  - lib/app/core/config/env.dart
+  - lib/app/services/domain/api_const.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/services/local_data/cache_manager.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/widgets/buttons/custom_primary_button.dart
+  - lib/app/localization/locales/en_us.dart
+  - lib/app/localization/locales/bn_bd.dart
+
+optional_integration: >-
+  offline_first - the natural pairing: the periodic task drains that module's
+  outbox while the app is closed. The README has the exact syncOutboxTask body,
+  plus the sqlite-locking caveat of opening the same drift database from a
+  second isolate. connectivity_banner - irrelevant in the background isolate,
+  which has no UI; the network constraint replaces it. crash_analytics - a
+  background isolate does not inherit the Sentry hooks bootstrap() installs, so
+  initialise it inside prepareBackgroundIsolate() if you want background crashes
+  reported. api_resilience - its interceptor is per-Dio, so a bare Dio built
+  inside a handler does not get it unless you add it there too.
+
+notes: |
+  THE #1 MISTAKE: the dispatcher must be a TOP-LEVEL function annotated
+  @pragma('vm:entry-point'). A closure, an instance method or a static method
+  compiles fine and then silently never runs in release, because the tree shaker
+  drops code no Dart call site reaches. backgroundCallbackDispatcher in
+  background_dispatcher.dart is already shaped correctly - do not move it into a
+  class and do not remove the pragma.
+
+  THE #2 MISTAKE: assuming the background isolate can see your singletons. It
+  cannot. It is a fresh isolate: Get is empty, no controller exists, no
+  CacheManager instance is warm, dotenv is unloaded, and nothing bootstrap() did
+  has happened. Every handler calls prepareBackgroundIsolate() first, which
+  re-runs the parts that matter (binding, DartPluginRegistrant, CacheManager,
+  Env).
+
+  Do NOT call ApiService from a handler. On a failed connectivity check it calls
+  showCustomSnackBar(context: Get.context!, ...) and Get.context is null in the
+  background isolate - that is a crash, reported to the OS as a failed task. Use
+  a bare Dio with ApiConstant.activeBaseUrl and the token from CacheManager.
+
+  The task name the handler receives is spelled differently per platform:
+  Android and iOS one-off tasks deliver the taskName, while iOS periodic and
+  processing tasks deliver the uniqueName (the BGTaskScheduler identifier).
+  BackgroundPolicy.resolveTaskName maps all of them, via
+  BackgroundTasks.uniqueNameAliases - keep that map in sync when you add a task.
+
+  SharedPreferences caches values per isolate, so the UI isolate does not see a
+  background write until it calls reload(). BackgroundRunLog does that on every
+  read, and BackgroundTaskService refreshes on app resume. Without it the UI
+  shows a stale result forever.
+
+  Workmanager().cancelByTag is a documented no-op on iOS, so cancelAll() cancels
+  each uniqueName first and only then falls back to the tag.
+
+  inputData crosses a platform channel: int, bool, double, String and lists of
+  those. Anything else must be a JSON string. An assert catches it in debug.
+
+  initialize(isInDebugMode:) is deprecated in workmanager 0.10 and has no
+  effect; this module does not pass it. Debug notifications are configured
+  natively now (WorkmanagerDebug), not from Dart.
+
+  API verified against workmanager 0.10.10 / workmanager_android 0.10.9 /
+  workmanager_apple 0.9.11 / workmanager_platform_interface 0.10.5 in the pub
+  cache. The package is federated as of 0.9 - `flutter pub get` pulls the
+  platform packages on its own; do not add them to pubspec.yaml.
+
+  test/unit/background_sync_test.dart is 15 tests over the pure policy and the
+  SharedPreferences mailbox (mocked) - no workmanager, no platform channels, no
+  network.

@@ -1,0 +1,139 @@
+name: feature_flags
+description: >-
+  Remote config, kill switches and A/B experiments from YOUR backend:
+  FeatureFlagService caches the flag document locally so the app works offline
+  and on first launch, exposes typed compile-time-safe keys (bool/int/string/
+  json) as Rx so the UI rebuilds mid-session, buckets experiments
+  deterministically with hash(userId + experimentKey) % 100, and ships a debug
+  screen with per-flag local overrides for QA. Flags are not a security
+  boundary. Ships 37 tests.
+
+# Copy each path from modules/feature_flags/<path> to <path> in the project.
+files:
+  - lib/app/services/feature_flags/feature_flag_keys.dart
+  - lib/app/services/feature_flags/feature_flag_bucketing.dart
+  - lib/app/services/feature_flags/feature_flag_resolver.dart
+  - lib/app/services/feature_flags/feature_flag_store.dart
+  - lib/app/services/feature_flags/feature_flags_api_const.dart
+  - lib/app/services/feature_flags/feature_flags_api_service.dart
+  - lib/app/services/feature_flags/feature_flag_service.dart
+  - lib/app/services/feature_flags/feature_flags_debug_controller.dart
+  - lib/app/services/feature_flags/feature_flags_debug_screen.dart
+  - test/unit/feature_flags_test.dart
+
+# No new packages: get, dio, shared_preferences and lucide_icons_flutter are
+# already in core.
+
+env:
+  FEATURE_FLAGS_PATH: >-
+    Optional. Path on ApiConstant.activeBaseUrl that serves the flag document.
+    Defaults to /config/flags when absent. Add a placeholder line to
+    .env.example; the module reads it only through Env.optional, so a missing
+    key is not a startup failure.
+
+setup: |
+  1. lib/bootstrap.dart - register the service BEFORE runApp so the very first
+     frame already sees cached flags. Add the imports:
+       import 'package:get/get.dart';
+       import 'app/services/feature_flags/feature_flag_service.dart';
+
+     Then, right after `await CacheManager.init();` (and before
+     `ViewModelBinding().dependencies();`):
+
+       // Cached flags are ready before the first frame; the fetch runs after it.
+       await Get.putAsync(() => FeatureFlagService().init());
+
+     init() reads the cache synchronously and schedules the network fetch in a
+     post-frame callback. Do NOT await the fetch here: ApiService shows an
+     offline snackbar through Get.context!, which does not exist yet.
+
+  2. After sign-in, so experiments bucket on the server's user id:
+       FeatureFlagService.to.setUserId(Get.find<UserDi>().userData?.id);
+       await FeatureFlagService.to.refresh();
+     And on sign-out:
+       FeatureFlagService.to.setUserId(null);
+
+  3. OPTIONAL - reach the debug screen. Route constant + GetPage, see "Routes".
+
+  4. REQUIRED IF you keep the debug screen: its 24 strings are not in
+     AppTranslations, so test/guardrails/localization_test.dart fails until you
+     paste the en_US and bn_BD blocks from the README into
+     lib/app/localization/locales/. Deleting the two debug files instead also
+     satisfies the guardrail.
+
+routes: >-
+  Only needed for the debug screen. lib/app/routes/app_routes.dart:
+  static const String FeatureFlagsDebugScreen = '/featureFlagsDebugScreen';
+  lib/app/routes/app_pages.dart - add the import
+  '../services/feature_flags/feature_flags_debug_screen.dart'
+  and the page
+  _page(AppRoutes.FeatureFlagsDebugScreen, () => const FeatureFlagsDebugScreen()).
+  Gate the entry point on kDebugMode so QA tooling does not ship a visible door.
+
+bindings: >-
+  Nothing to add to ViewModelBinding. FeatureFlagService is a GetxService
+  registered with Get.putAsync, and FeatureFlagsDebugController is created by
+  GetBuilder(init:) inside the screen, so test/guardrails/bindings_test.dart
+  does not ask for either - it only scans lib/app/feature/.
+
+platform_config: None required - no native code, no permissions, no new packages.
+
+requires:
+  - lib/app/core/config/env.dart
+  - lib/app/services/domain/api_service.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/widgets/appbar_widgets/appbar_widget.dart
+  - lib/app/widgets/buttons/custom_primary_button.dart
+  - lib/app/widgets/feedback/custom_snack_bar.dart
+  - lib/app/widgets/inputs/custom_text_field.dart
+  - lib/app/widgets/layout/custom_bottom_sheet.dart
+
+optional_integration: >-
+  api_resilience - the flag fetch is a GET, so it gets dedup, jittered retries
+  and the circuit breaker for free. crash_analytics - report a fetch failure as a
+  breadcrumb rather than a crash; a failed fetch is expected, not exceptional.
+  settings_ui - add a hidden row that opens the debug screen in dev builds.
+  push_notifications - a silent push is the cheapest way to make clients refresh
+  a kill switch within seconds instead of on next launch.
+
+notes: |
+  FLAGS ARE NOT A SECURITY BOUNDARY. A gated feature's code still ships in the
+  binary, and a patched client can flip any flag locally. Anything that must not
+  happen has to be refused by the server.
+
+  Kill switches only work because of the cache. Resolution is always
+  override -> cached remote value -> hardcoded default. If a failed fetch reset
+  a flag to its compiled default, an offline launch would silently re-enable the
+  feature you just killed - that is a kill switch that fails open, which is no
+  kill switch at all. refresh() therefore never clears anything on failure; it
+  returns false and leaves the last good document in place.
+
+  The hardcoded default is still a policy decision. KillSwitch defaults to
+  enabled, which is right for a feature users already have; pass
+  fallback: false for anything that must stay off on a device that has never
+  reached your backend.
+
+  Bucketing must be deterministic or the experiment measures nothing. It is
+  FNV-1a 32-bit over "<id>:<key>", mod 100 - reproducible in any backend
+  language (README has the algorithm). Variant choice uses a second salt,
+  "<id>:<key>#variant", so raising exposure enrols more users without moving the
+  ones already in a variant. Signed-out users bucket on a per-install anonymous
+  id, so they are stable per device, not per person.
+
+  Local overrides are ignored when kReleaseMode is true (set
+  FeatureFlagService.allowOverrides = true before init() to change that). They
+  live in plaintext SharedPreferences - never put anything sensitive in a flag
+  value.
+
+  FeatureFlagStore caches the SharedPreferences instance, so calling
+  SharedPreferences.setMockInitialValues a second time in one test file has no
+  effect. Seed through FeatureFlagStore.setRawDocument instead - the shipped
+  tests show the pattern.
+
+  test/unit/feature_flags_test.dart is 37 tests: the FNV-1a vectors, bucket
+  determinism and spread, the precedence ladder, type coercion of malformed
+  remote values, document parsing, cache-survives-a-failed-fetch, and three
+  widget tests over the debug screen. No network, no sleeping.

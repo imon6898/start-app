@@ -1,0 +1,105 @@
+name: adaptive_layout
+description: >-
+  Responsive/adaptive layout kit built on the existing R helper: Material window
+  size classes, an AdaptiveScaffold that renders a bottom bar / navigation rail /
+  pinned drawer from one destination list, a MasterDetailView that stacks on a
+  phone and splits on a tablet with correct back behaviour on both, hinge-aware
+  splitting from MediaQuery.displayFeatures, and a grid sized by target tile
+  width instead of a hardcoded column count. Ships 37 tests.
+
+# Copy each path from modules/adaptive_layout/<path> to <path> in the project.
+files:
+  - lib/app/widgets/layout/adaptive_breakpoints.dart
+  - lib/app/widgets/layout/adaptive_hinge.dart
+  - lib/app/widgets/layout/adaptive_scaffold.dart
+  - lib/app/widgets/layout/master_detail_view.dart
+  - lib/app/widgets/layout/adaptive_grid.dart
+  - lib/app/widgets/layout/adaptive_layout.dart
+  - test/unit/adaptive_layout_test.dart
+  - test/widget/adaptive_layout_widget_test.dart
+
+# No new packages. flutter, get and lucide_icons_flutter are already in core.
+
+setup: |
+  Nothing has to run at startup - every widget reads the live MediaQuery. The
+  module compiles and its tests pass the moment the files land.
+
+  1. OPTIONAL - reach the widgets through the shared barrel. Add one line to
+     lib/app/widgets/layout/layout.dart:
+       export 'adaptive_layout.dart';
+     Without it, import the barrel directly:
+       import 'package:flutter_starter/app/widgets/layout/adaptive_layout.dart';
+
+  2. Destination labels are translation KEYS - AdaptiveScaffold calls .tr on
+     each one. Add them to lib/app/localization/locales/ (en_US plus every other
+     locale) or the localization guardrail test fails on the unused/missing key
+     check. The module itself ships zero translated literals, so installing it
+     alone changes nothing there.
+
+  3. AdaptiveScaffold owns its Scaffold. A screen using it returns
+     AdaptiveScaffold instead of Scaffold; keep the GetBuilder shell above it.
+
+bindings: >-
+  Nothing to register. These are plain widgets, not controllers, so
+  test/guardrails/bindings_test.dart does not ask for them. The selected index
+  belongs in whatever GetxController already owns the screen.
+
+routes: None added.
+
+platform_config: >-
+  None required - no native code, no permissions, no .env keys. Foldable and
+  desktop behaviour comes from MediaQuery, which Flutter already populates on
+  Android (Jetpack WindowManager), macOS, Windows, Linux and web.
+
+requires:
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+
+optional_integration: |
+  settings_ui - the settings screen is the easiest place to prove the layout
+  survives a resize; drop it into an AdaptiveScaffold destination.
+
+  extra_widgets - its paginated grid is a different tool: AdaptiveGrid sizes
+  columns, it does not page. Use both.
+
+notes: |
+  Built ON TOP of R, not instead of it. R still owns every size (R.h/R.w/R.sp/
+  R.pad); this module only decides WHICH layout to build. No flutter_screenutil,
+  no second scaling system, no ScreenUtilInit.
+
+  Breakpoints are raw logical pixels on purpose - 600 / 840 for width, 480 / 900
+  for height, straight from Material. Running them through R.w() would make the
+  breakpoint move with the window it is measuring.
+
+  Rail and drawer widths are Material component metrics, so they are scaled with
+  R.w() and then CLAMPED (rail 72-112, drawer 280-360, extended rail 256-320).
+  Unclamped, R.w(72) reaches 130 on a desktop window, which is not a rail.
+
+  Every rule is a pure static function - AdaptiveBreakpoints.widthClass,
+  AdaptiveScaffold.resolveStyle, MasterDetailView.shouldSplit,
+  AdaptiveGrid.columnsFor, HingeInfo.fromFeatures - so the decisions are tested
+  without a widget tree or a fake device.
+
+  Text scaling is treated as a first-class input, not an afterthought. At >=130%
+  the bottom bar hides labels (keeping tooltips) and the rail drops to icons
+  only; MasterDetailView needs 2 x minPaneWidth x textScale before it splits, so
+  a 900px tablet at 200% font size correctly goes back to stacked.
+
+  MasterDetailView on compact uses a NESTED Navigator, which means Get.back()
+  inside a detail pops the ROOT GetX navigator, not the detail. Use the supplied
+  AdaptiveDetailBackButton, the onClose callback, or Navigator.of(context).pop().
+  The system back gesture and the Android back button are handled - there is a
+  test for exactly that.
+
+  Hinge geometry is read from MediaQuery.displayFeatures (type hinge or fold,
+  spanning the window; cutouts are ignored). HingeAwareSplit maps it into local
+  coordinates using AdaptiveScaffoldScope.navigationInset, so a rail or drawer
+  to the left does not throw the seam off. If a hinge would leave either pane
+  under 20% of the box, the hinge is ignored - a 60px sliver is worse than
+  ignoring the hardware.
+
+  Reaching the test file: flutter test test/unit/adaptive_layout_test.dart and
+  flutter test test/widget/adaptive_layout_widget_test.dart. The widget test
+  resizes tester.view instead of mocking MediaQuery, so R and CustomColors see
+  the same window the widgets do. No network, no goldens, no platform channels.

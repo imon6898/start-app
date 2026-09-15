@@ -1,0 +1,209 @@
+name: in_app_purchase
+description: >-
+  Subscriptions and one-time purchases through the App Store and Google Play -
+  mandatory for digital goods on mobile. Ships a paywall with restore and legal
+  links, a GetxService that owns the purchase stream from launch, and a Repo
+  that posts every receipt to YOUR backend for server-side validation.
+  Entitlement is cached for offline use; the server stays the source of truth.
+
+# Copy each path from modules/in_app_purchase/<path> to <path> in the project.
+files:
+  - lib/app/feature/purchases/purchases_logic/purchases_api_const.dart
+  - lib/app/feature/purchases/purchases_logic/purchases_api_service.dart
+  - lib/app/feature/purchases/purchases_logic/purchases_catalog.dart
+  - lib/app/feature/purchases/purchases_logic/purchases_store_client.dart
+  - lib/app/feature/purchases/purchases_logic/entitlement_store.dart
+  - lib/app/feature/purchases/purchases_models/entitlement_model.dart
+  - lib/app/feature/purchases/purchases_models/purchase_outcome.dart
+  - lib/app/feature/purchases/purchases_controllers/paywall_controller.dart
+  - lib/app/feature/purchases/purchases_presentation/paywall_screen.dart
+  - lib/app/feature/purchases/purchases_presentation/purchases_widgets/purchase_product_tile.dart
+  - lib/app/feature/purchases/purchases_presentation/purchases_widgets/entitlement_banner.dart
+  - lib/app/services/purchases_service.dart
+  - test/unit/purchases_test.dart
+  - test/widget/paywall_screen_test.dart
+
+dependencies:
+  in_app_purchase: ^3.3.0
+
+env: |
+  All optional. Without them the catalog falls back to the placeholder ids in
+  purchases_catalog.dart (pro_monthly / pro_yearly / pro_lifetime), which the
+  store will report in notFoundIDs until you create the real ones.
+
+    IAP_SUBSCRIPTION_IDS=pro_monthly,pro_yearly
+    IAP_NON_CONSUMABLE_IDS=pro_lifetime
+    IAP_CONSUMABLE_IDS=
+
+  Read through Env.optional(...), so no Env getter is needed and
+  Env.requiredKeys is untouched. Add placeholder lines to .env.example.
+
+setup: |
+  1. lib/bootstrap.dart - register the service BEFORE runApp, so the purchase
+     stream has a listener when an interrupted purchase is re-delivered on
+     launch. Add the import:
+       import 'app/services/purchases_service.dart';
+
+     Then, next to the other startup awaits:
+       await Get.putAsync(() => PurchasesService().init(), permanent: true);
+
+     PurchasesService.ensure() registers it late if you skip this, but a
+     purchase interrupted before launch is then noticed too late.
+
+  2. lib/app/bindings/view_model_binding.dart - add the import and register the
+     screen controller (the bindings guardrail requires it):
+       import '../feature/purchases/purchases_controllers/paywall_controller.dart';
+
+       // Purchases
+       _lazy<PaywallController>(() => PaywallController());
+
+  3. lib/app/routes/app_routes.dart:
+       /// Purchases
+       static const String PaywallScreen = '/paywallScreen';
+
+     lib/app/routes/app_pages.dart - import and route it:
+       import '../feature/purchases/purchases_presentation/paywall_screen.dart';
+
+       // Purchases
+       _page(AppRoutes.PaywallScreen, () => const PaywallScreen()),
+
+  4. lib/app/localization/locales/en_us.dart AND bn_bd.dart - append the same
+     41 keys to BOTH files. The localization guardrail requires every `.tr`
+     literal to have an en_US entry and every locale to carry the same keys, so
+     pasting into one file only will fail `flutter test`. The list is in the
+     README under Wiring, step 5.
+
+  5. On sign-out, next to CacheManager.removeAll():
+       await Get.find<PurchasesService>().clear();
+     Without it the next account on the device inherits the cached entitlement.
+
+routes: >-
+  Add AppRoutes.PaywallScreen plus the matching GetPage. The module never
+  references that constant itself, so it compiles before you add it.
+  Terms of Service and Privacy Policy already exist in core AppRoutes and are
+  what the paywall links to by default.
+
+bindings: >-
+  PaywallController must be registered in ViewModelBinding with _lazy (it lives
+  under lib/app/feature/, so test/guardrails/bindings_test.dart demands it).
+  PurchasesService is a GetxService, not a screen controller - register it with
+  Get.putAsync(..., permanent: true) in bootstrap instead.
+
+platform_config:
+  android: |
+    - minSdk 21 or higher (the plugin bundles Play Billing Library 8.0.0).
+    - Add the billing permission to
+      android/app/src/main/AndroidManifest.xml, inside <manifest>:
+        <uses-permission android:name="com.android.vending.BILLING" />
+    - The app must be uploaded to a Play Console track (internal testing is
+      enough) and signed with the same key. Products never resolve for a debug
+      build installed over adb with a different signature.
+    - Create the products in Play Console > Monetise > Products, then activate
+      them. A subscription needs at least one active base plan.
+    - Add testers under Play Console > Monetise > Setup > Licence testing to
+      get test purchases that are not charged.
+  ios: |
+    - iOS 13.0 minimum in ios/Podfile and the Runner deployment target.
+    - In-App Purchase is a capability Xcode adds automatically for StoreKit,
+      but the agreement matters: App Store Connect > Business > Paid
+      Applications Agreement must be ACTIVE or queryProductDetails returns
+      nothing at all, with no error.
+    - Create the products in App Store Connect > your app > Subscriptions /
+      In-App Purchases, fill in every metadata field including the review
+      screenshot, and get them to "Ready to Submit".
+    - Create a Sandbox tester under Users and Access > Sandbox > Test Accounts.
+      Sign out of the real App Store account on the device first.
+    - StoreKit 2 is the default in in_app_purchase_storekit 0.4.x, so
+      serverVerificationData is the JWS signed transaction, NOT a base64 app
+      receipt. Your backend must verify it with the App Store Server API.
+  macos: |
+    Supported by the same storekit implementation. Add the In-App Payments
+    entitlement in both macos/Runner/*.entitlements files.
+  notes: |
+    Nothing to configure for the receipt-validation endpoints beyond your own
+    backend: no store secret ever goes in the app.
+
+requires:
+  - lib/bootstrap.dart
+  - lib/app/bindings/view_model_binding.dart
+  - lib/app/routes/app_routes.dart
+  - lib/app/routes/app_pages.dart
+  - lib/app/core/config/env.dart
+  - lib/app/core/models/base_response.dart
+  - lib/app/services/domain/api_service.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/widgets/appbar_widgets/appbar_widget.dart
+  - lib/app/widgets/buttons/custom_primary_button.dart
+  - lib/app/widgets/feedback/custom_snack_bar.dart
+  - lib/app/widgets/layout/layout_components.dart
+  - lib/app/localization/locales/en_us.dart
+  - lib/app/localization/locales/bn_bd.dart
+
+optional_integration: >-
+  connectivity_banner - the paywall keeps working offline off the cached
+  entitlement; the banner tells the user why the price list is stale.
+  secure_storage - the entitlement cache is not secret (the server re-checks
+  it), so it stays in SharedPreferences; move it only if you want to.
+  webview or settings_ui (url_launcher) - needed if Terms / Privacy should open
+  a hosted page instead of the in-app routes, and for the "Manage subscription"
+  deep link.
+
+notes: |
+  RECEIPT VALIDATION IS SERVER-SIDE. This is not a style preference. A client
+  that decides its own entitlement is bypassed by editing the app: a patched
+  binary returns true from any local check, and "purchased == true" in Dart is
+  one boolean away from free. What a patched app cannot do is forge a receipt
+  Apple or Google will sign for. So the client's only job is to carry the
+  receipt to your server; the server calls the store, and the server decides.
+
+  Two endpoints on YOUR backend are required. Neither exists in the template:
+    POST /billing/purchases/verify   one receipt in, entitlement out
+    GET  /billing/entitlement        current entitlement, the source of truth
+  Plus one batch endpoint used by restore, POST /billing/purchases/sync, and
+  two store webhooks (App Store Server Notifications V2, Play RTDN) that catch
+  renewals, cancellations and refunds while the app is closed.
+
+  Receipt format differs per platform and per StoreKit version.
+  verificationData.serverVerificationData is:
+    - Android: the Play purchase token
+    - iOS with StoreKit 2 (the DEFAULT in in_app_purchase_storekit 0.4.x): the
+      JWS signed transaction
+    - iOS with StoreKit 1: the base64 app receipt
+  Getting this wrong is the usual cause of "verification always fails".
+
+  STRIPE CANNOT BE USED FOR DIGITAL GOODS ON iOS. App Store Review Guideline
+  3.1.1 requires in-app purchase for unlocking features or content inside the
+  app. The payment_stripe module is for physical goods and real-world services
+  only. Shipping a Stripe paywall for a subscription is a guaranteed rejection.
+
+  RESTORE PURCHASES IS MANDATORY (Guideline 3.1.1). It is implemented and
+  surfaced on the paywall. Do not hide it behind a settings screen.
+
+  Completing a purchase is deliberate, not automatic:
+    - a PENDING purchase is never completed (the plugin throws)
+    - a purchase is completed only AFTER the server grants the entitlement, so
+      a failed verification leaves the receipt in the store queue to retry
+    - an explicit server refusal DOES complete it, so the store stops
+      re-delivering a receipt that will never be accepted, and Google does not
+      auto-refund it after three days
+  On iOS a never-completed transaction is re-delivered on every launch and
+  blocks a second purchase of the same product with a duplicate-transaction
+  error.
+
+  Offline access comes from EntitlementStore, capped at
+  EntitlementStore.maxCacheAge (7 days). The device clock is user-controlled,
+  so the local expiry check is a courtesy to honest users, not enforcement.
+
+  30 tests ship with the module. test/unit/purchases_test.dart is 24 over the
+  receipt/entitlement parsing, the access rules, the cache staleness window and
+  the catalog - no platform channels, no network, no store.
+  test/widget/paywall_screen_test.dart is 6 over the degraded path a test
+  environment gives you: no store, no products, restore and the legal links
+  still present, and a hung product query falling back to the empty state
+  instead of an endless spinner.
+
+  Verified end to end: with the five setup steps applied, `flutter analyze`
+  reports 0 issues and `flutter test` is 75 passing (45 template + 30 here).
