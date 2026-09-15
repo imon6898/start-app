@@ -133,13 +133,13 @@ class CreateAccountScreen extends StatelessWidget {
       text: TextSpan(
         children: [
           TextSpan(
-            text: 'Already have an account? '.tr,
+            text: '${'Already have an account?'.tr} ',
             style: CustomTextStyles.semiBold14.copyWith(
               color: CustomColors.primary(),
             ),
           ),
           TextSpan(
-            text: 'Log In'.tr,
+            text: 'Login'.tr,
             style: CustomTextStyles.semiBold14.copyWith(
               color: CustomColors.primary(),
             ),

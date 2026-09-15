@@ -53,8 +53,8 @@ class RetypePassController extends GetxController {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Failure,
-        title: 'Error',
-        description: 'Passwords do not match',
+        title: 'Error'.tr,
+        description: 'Passwords do not match.'.tr,
       );
       return;
     }
@@ -89,7 +89,7 @@ class RetypePassController extends GetxController {
           showCustomSnackBar(
             context: Get.context!,
             type: SnackBarType.Success,
-            title: 'Success',
+            title: 'Success'.tr,
             description: message,
           );
         }
@@ -101,7 +101,7 @@ class RetypePassController extends GetxController {
         showCustomSnackBar(
           context: Get.context!,
           type: SnackBarType.Failure,
-          title: 'Error',
+          title: 'Error'.tr,
           description: errorMessage,
         );
       }
@@ -109,8 +109,8 @@ class RetypePassController extends GetxController {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Failure,
-        title: 'Error',
-        description: 'Something went wrong. Please try again.',
+        title: 'Error'.tr,
+        description: 'Something went wrong. Please try again.'.tr,
       );
     } finally {
       isLoadingResetPass.value = false;

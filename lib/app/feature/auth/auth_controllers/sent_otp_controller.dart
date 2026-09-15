@@ -71,7 +71,7 @@ class SentOtpController extends GetxController {
         showCustomSnackBar(
           context: Get.context!,
           type: SnackBarType.Success,
-          title: 'Success',
+          title: 'Success'.tr,
           description:
               response['data']?['message'] ??
               response['message'] ??
@@ -89,11 +89,11 @@ class SentOtpController extends GetxController {
         );
       } else {
         final errorMessage =
-            response?['message'] ?? 'Failed to send OTP. Please try again.';
+            response?['message'] ?? 'Failed to send OTP. Please try again.'.tr;
         showCustomSnackBar(
           context: Get.context!,
           type: SnackBarType.Failure,
-          title: 'Error',
+          title: 'Error'.tr,
           description: errorMessage,
         );
       }
@@ -101,8 +101,8 @@ class SentOtpController extends GetxController {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Failure,
-        title: 'Error',
-        description: 'Something went wrong. Please try again.',
+        title: 'Error'.tr,
+        description: 'Something went wrong. Please try again.'.tr,
       );
     } finally {
       isLoadingSentOtp.value = false;

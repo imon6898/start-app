@@ -216,9 +216,26 @@ on the next visit instead of throwing. Never `Get.put()` inside a `build()`.
 
 **Styling is non-negotiable.** Sizing through `R.*`, colors through `CustomColors.*()`, type through
 `CustomTextStyles.*`, asset paths through `ImageUtils`, user-facing strings end in `.tr` and get a
-key in `AppTranslations`. Note `R.pad()` / `R.margin()` already scale internally —
+key in every locale map. Note `R.pad()` / `R.margin()` already scale internally —
 `R.pad(horizontal: 16)`, never `R.pad(horizontal: R.w(16))`, which double-scales and renders wide on
 any device that isn't the design width.
+
+**Localization keys are the English source strings**, not symbolic ids. A missed key renders as
+readable English instead of `auth.signin.title`, which is why the fallback is safe to rely on. The
+cost is that duplicates are invisible — `'Login'` and `'Log In'` are two keys — so `en_US` is kept
+as an exact mirror of its own keys and the guardrail fails on any drift:
+
+```
+lib/app/localization/
+├── app_translations.dart   locale plumbing: supported, initialLocale, setLocale
+└── locales/
+    ├── en_us.dart          source language — every value equals its key
+    └── bn_bd.dart          worked example for a second language
+```
+
+Three rules that keep it from rotting: never pad a key with whitespace (add the space in the widget,
+`'${'I agree to the'.tr} '`), never interpolate into a key (use `.trParams` with `@n`), and never
+localize inside a model — `.tr` belongs at the display site.
 
 ---
 
@@ -306,6 +323,7 @@ What the guardrails lock down:
 | Layer flow | `ApiService()` constructed outside a `*_logic/` file; a screen importing a Repo |
 | Style conventions | raw hex colors, raw pixel literals, `R.pad(horizontal: R.w(…))` double-scaling |
 | Config | a key used by `Env` that is missing from `.env.example` |
+| Localization | a `.tr` string with no key, a key nothing calls, a locale map out of sync with `en_US`, a key padded with whitespace |
 
 Adding a feature means adding its route, its binding entry and its folder prefix — the guardrails
 tell you which one you forgot. Before declaring any change done:
@@ -326,6 +344,7 @@ flutter test
 | Add a config value | getter on `Env` + a placeholder line in `.env.example` | `dotenv.get(...)` at the call site |
 | Add a shared widget | a folder under `lib/app/widgets/` with a barrel file, re-exported from `widgets.dart` | a loose file at the widgets root |
 | Add a color | a method on `CustomColors` returning the light/dark pair | a `Color(0xFF…)` at the call site |
-| Add a string | `.tr` at the call site + a key in `AppTranslations` | a bare string literal |
+| Add a string | `.tr` at the call site + the same key in every map under `localization/locales/` | a bare string literal |
+| Add a language | translate a copy of `locales/en_us.dart` + one line in `AppTranslations._locales` | a second `supportedLocales` list |
 | Add a heavy dependency | package it under `modules/` with a `module.yaml` | grow `pubspec.yaml` for everyone |
 | Change the Repo return type | don't | `Result<T>` / `Either` |

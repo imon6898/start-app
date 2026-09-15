@@ -144,7 +144,7 @@ class SigninScreen extends StatelessWidget {
               CustomTextField(
                 controller: controller.emailController,
                 textHeading: 'Email Address'.tr,
-                hintText: 'Enter email address'.tr,
+                hintText: 'Enter your email'.tr,
                 inputType: TextInputType.emailAddress,
                 validator: Validators.emailValidator.call,
               ),
@@ -182,7 +182,7 @@ class SigninScreen extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: R.w(16)),
           child: Text(
-            'Forget Password?'.tr,
+            'Forgot Password?'.tr,
             style: CustomTextStyles.medium14.copyWith(
               color: CustomColors.primary(),
             ),
@@ -270,7 +270,7 @@ class SigninScreen extends StatelessWidget {
         child: Opacity(
           opacity: isDisabled ? 0.5 : 1.0,
           child: CustomOutlinedButton(
-            text: 'Login With Apple'.tr,
+            text: 'Login with Apple'.tr,
             textStyle: CustomTextStyles.medium12,
             loading: controller.isLoadingAppleSignIn.value,
             onPressed: isDisabled

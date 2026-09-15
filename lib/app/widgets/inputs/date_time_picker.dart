@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_starter/app/utils/constants/app_colors.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:get/get.dart';
 
 class DatePickerButton extends StatelessWidget {
   final Function(DateTime?)? onDatePicked;
@@ -66,7 +67,7 @@ class DatePickerButton extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  text ?? 'Select date',
+                  text ?? 'Select date'.tr,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,

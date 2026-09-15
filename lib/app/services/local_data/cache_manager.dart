@@ -13,6 +13,15 @@ class CacheManager {
 
   static Future<void> init() async {
     _pref = await SharedPreferences.getInstance();
+    await _purgeLegacyKeys();
+  }
+
+  /// Older builds persisted the plaintext login password. Delete it on every
+  /// launch so upgrading installs stop carrying it.
+  static Future<void> _purgeLegacyKeys() async {
+    for (final key in const ['loginPassword']) {
+      if (_pref?.containsKey(key) ?? false) await _pref!.remove(key);
+    }
   }
 
   // ── Auth tokens ──
@@ -76,12 +85,8 @@ class CacheManager {
       _saveToCache(CacheKeys.loginEmail.name, value);
   static Future<bool> removeLoginEmail() => _remove(CacheKeys.loginEmail.name);
 
-  static String? get getLoginPassword =>
-      _getFromCache<String>(CacheKeys.loginPassword.name);
-  static Future<bool> setLoginPassword(String value) =>
-      _saveToCache(CacheKeys.loginPassword.name, value);
-  static Future<bool> removeLoginPassword() =>
-      _remove(CacheKeys.loginPassword.name);
+  // No password getter/setter by design: SharedPreferences is plaintext and a
+  // password cannot be revoked. "Remember me" persists the email only.
 
   // ── Locale ──
   /// Stored as "languageCode_countryCode" (e.g. "bn_BD").
@@ -132,7 +137,6 @@ enum CacheKeys {
   isGuest,
   hasSeenOnboarding,
   loginEmail,
-  loginPassword,
   locale,
   themeId,
 }

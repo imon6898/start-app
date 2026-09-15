@@ -5,6 +5,7 @@ import 'package:flutter_starter/app/utils/constants/app_colors.dart';
 import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
 import 'package:flutter_starter/app/utils/responsive_utils.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:get/get.dart';
 
 class CustomPhoneTextField extends StatefulWidget {
   final String? hintText;
@@ -47,7 +48,7 @@ class CustomPhoneTextField extends StatefulWidget {
 
   const CustomPhoneTextField({
     super.key,
-    this.hintText = 'Enter phone number',
+    this.hintText,
     this.textHeading,
     this.controller,
     this.focusNode,
@@ -359,11 +360,11 @@ class CustomPhoneTextFieldState extends State<CustomPhoneTextField>
       return null;
     }
     if (value == null || value.trim().isEmpty) {
-      return 'Phone number is required';
+      return 'Phone number is required.'.tr;
     }
     final digits = value.replaceAll(RegExp(r'\D'), '');
-    if (digits.length < 7) return 'Phone number is too short';
-    if (digits.length > 15) return 'Phone number is too long';
+    if (digits.length < 7) return 'Phone number is too short.'.tr;
+    if (digits.length > 15) return 'Phone number is too long.'.tr;
     return null;
   }
 
@@ -414,7 +415,7 @@ class CustomPhoneTextFieldState extends State<CustomPhoneTextField>
               decoration: InputDecoration(
                 errorMaxLines: 2,
                 isDense: true,
-                hintText: widget.hintText,
+                hintText: widget.hintText ?? 'Enter phone number'.tr,
                 hintStyle: CustomTextStyles.regular16.copyWith(
                   color: CustomColors.gray2(),
                 ),
@@ -546,7 +547,7 @@ class _DropdownContentState extends State<_DropdownContent> {
               controller: widget.searchController,
               onChanged: _onSearch,
               decoration: InputDecoration(
-                hintText: 'Search country...',
+                hintText: 'Search country...'.tr,
                 hintStyle: CustomTextStyles.regular14.copyWith(
                   color: CustomColors.gray2(),
                 ),

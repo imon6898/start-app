@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 import 'package:dio/dio.dart' as res;
 import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -43,14 +42,8 @@ class ApiService {
     }
 
     _dio = Dio(options);
-    _dio.httpClientAdapter = IOHttpClientAdapter(
-      createHttpClient: () {
-        final HttpClient client = HttpClient();
-        client.badCertificateCallback =
-            (X509Certificate cert, String host, int port) => kDebugMode;
-        return client;
-      },
-    );
+    // No badCertificateCallback: an untrusted chain must fail in every build.
+    // To proxy locally, add the proxy CA to the device trust store instead.
 
     // Add token refresh interceptor
     _dio.interceptors.add(
@@ -239,8 +232,8 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: 'No internet connection',
-        description: 'Please check your internet connection',
+        title: 'No internet connection'.tr,
+        description: 'Please check your internet connection'.tr,
       );
       return null;
     }
@@ -267,8 +260,8 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: 'No internet connection',
-        description: 'Please check your internet connection',
+        title: 'No internet connection'.tr,
+        description: 'Please check your internet connection'.tr,
       );
       return null;
     }
@@ -308,8 +301,8 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: 'No internet connection',
-        description: 'Please check your internet connection',
+        title: 'No internet connection'.tr,
+        description: 'Please check your internet connection'.tr,
       );
       return null;
     }
@@ -331,8 +324,8 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: 'No internet connection',
-        description: 'Please check your internet connection',
+        title: 'No internet connection'.tr,
+        description: 'Please check your internet connection'.tr,
       );
       return null;
     }
@@ -354,8 +347,8 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: 'No internet connection',
-        description: 'Please check your internet connection',
+        title: 'No internet connection'.tr,
+        description: 'Please check your internet connection'.tr,
       );
       return null;
     }
@@ -385,8 +378,8 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: 'No internet connection',
-        description: 'Please check your internet connection',
+        title: 'No internet connection'.tr,
+        description: 'Please check your internet connection'.tr,
       );
       return null;
     }
@@ -458,8 +451,8 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: 'No internet connection',
-        description: 'Please check your internet connection',
+        title: 'No internet connection'.tr,
+        description: 'Please check your internet connection'.tr,
       );
       return null;
     }
@@ -532,8 +525,8 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: 'No internet connection',
-        description: 'Please check your internet connection',
+        title: 'No internet connection'.tr,
+        description: 'Please check your internet connection'.tr,
       );
       return null;
     }
@@ -602,8 +595,8 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: 'No internet connection',
-        description: 'Please check your internet connection',
+        title: 'No internet connection'.tr,
+        description: 'Please check your internet connection'.tr,
       );
       return null;
     }
@@ -671,8 +664,8 @@ class ApiService {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: 'No internet connection',
-        description: 'Please check your internet connection',
+        title: 'No internet connection'.tr,
+        description: 'Please check your internet connection'.tr,
       );
       return null;
     }

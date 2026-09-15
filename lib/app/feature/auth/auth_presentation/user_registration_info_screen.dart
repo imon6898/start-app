@@ -206,7 +206,7 @@ class _UserRegistrationInfoScreenState
                   text: TextSpan(
                     children: [
                       TextSpan(
-                        text: 'I agree to the '.tr,
+                        text: '${'I agree to the'.tr} ',
                         style: CustomTextStyles.regular14.copyWith(
                           color: CustomColors.paragraph(),
                         ),
@@ -245,7 +245,7 @@ class _UserRegistrationInfoScreenState
             Padding(
               padding: EdgeInsets.only(top: R.h(4), left: R.w(30)),
               child: Text(
-                'You must agree to the terms'.tr,
+                'Please accept terms'.tr,
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: R.sp(12),
@@ -264,7 +264,7 @@ class _UserRegistrationInfoScreenState
         text: TextSpan(
           children: [
             TextSpan(
-              text: 'Already have an account? '.tr,
+              text: '${'Already have an account?'.tr} ',
               style: CustomTextStyles.regular14.copyWith(
                 color: CustomColors.textGray(),
               ),

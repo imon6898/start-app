@@ -6,6 +6,7 @@ import 'package:flutter_svg/svg.dart';
 
 import 'package:flutter_starter/app/utils/responsive_utils.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:get/get.dart';
 
 class CustomTextField extends StatefulWidget {
   final String? hintText;
@@ -53,7 +54,7 @@ class CustomTextField extends StatefulWidget {
 
   const CustomTextField({
     super.key,
-    this.hintText = 'Write something...',
+    this.hintText,
     this.controller,
     this.focusNode,
     this.prefixImage,
@@ -290,7 +291,7 @@ class _CustomTextFormFiledState extends State<CustomTextField> {
                     )
                   : InputBorder.none,
               errorStyle: TextStyle(color: CustomColors.error()),
-              hintText: widget.hintText,
+              hintText: widget.hintText ?? 'Write something...'.tr,
               fillColor: widget.fillColor,
               hintMaxLines: widget.miniLine,
               hintStyle:

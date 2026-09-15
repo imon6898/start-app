@@ -103,8 +103,8 @@ class VerifyOtpController extends GetxController {
         showCustomSnackBar(
           context: Get.context!,
           type: SnackBarType.Success,
-          title: 'Success',
-          description: 'OTP verified successfully',
+          title: 'Success'.tr,
+          description: 'OTP verified successfully'.tr,
         );
 
         // Navigate based on fromPage
@@ -129,11 +129,11 @@ class VerifyOtpController extends GetxController {
       } else {
         // Show error message from response or default
         final errorMessage =
-            response?['message'] ?? 'Invalid OTP. Please try again.';
+            response?['message'] ?? 'Invalid OTP. Please try again.'.tr;
         showCustomSnackBar(
           context: Get.context!,
           type: SnackBarType.Failure,
-          title: 'Error',
+          title: 'Error'.tr,
           description: errorMessage,
         );
       }
@@ -141,8 +141,8 @@ class VerifyOtpController extends GetxController {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Failure,
-        title: 'Error',
-        description: 'Invalid OTP. Please try again.',
+        title: 'Error'.tr,
+        description: 'Invalid OTP. Please try again.'.tr,
       );
     } finally {
       isLoadingVerifyOtp.value = false;
@@ -155,7 +155,7 @@ class VerifyOtpController extends GetxController {
       final loginResponse = await _authRepo.postLoginRepo(loginParams);
 
       if (loginResponse == null) {
-        _navigateToSignin('Account verified! Please login to continue.');
+        _navigateToSignin('Account verified! Please login to continue.'.tr);
         return;
       }
 
@@ -166,7 +166,7 @@ class VerifyOtpController extends GetxController {
       );
 
       if (baseResponse.data == null || baseResponse.data!.accessToken == null) {
-        _navigateToSignin('Account verified! Please login to continue.');
+        _navigateToSignin('Account verified! Please login to continue.'.tr);
         return;
       }
 
@@ -192,13 +192,13 @@ class VerifyOtpController extends GetxController {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Success,
-        title: 'Welcome!',
-        description: 'Registration completed successfully.',
+        title: 'Welcome!'.tr,
+        description: 'Registration completed successfully.'.tr,
       );
 
       Get.offAllNamed(AppRoutes.DashboardScreen);
     } catch (e) {
-      _navigateToSignin('Account verified! Please login to continue.');
+      _navigateToSignin('Account verified! Please login to continue.'.tr);
     }
   }
 
@@ -206,7 +206,7 @@ class VerifyOtpController extends GetxController {
     showCustomSnackBar(
       context: Get.context!,
       type: SnackBarType.Warning,
-      title: 'Login Required',
+      title: 'Login Required'.tr,
       description: message,
     );
     Get.offAllNamed(AppRoutes.SigninScreen);
@@ -234,17 +234,18 @@ class VerifyOtpController extends GetxController {
         showCustomSnackBar(
           context: Get.context!,
           type: SnackBarType.Success,
-          title: 'Success',
-          description: 'OTP resent successfully',
+          title: 'Success'.tr,
+          description: 'OTP resent successfully'.tr,
         );
       } else {
         // Show error message from response or default
         final errorMessage =
-            response?['message'] ?? 'Failed to resend OTP. Please try again.';
+            response?['message'] ??
+            'Failed to resend OTP. Please try again.'.tr;
         showCustomSnackBar(
           context: Get.context!,
           type: SnackBarType.Failure,
-          title: 'Error',
+          title: 'Error'.tr,
           description: errorMessage,
         );
       }
@@ -252,8 +253,8 @@ class VerifyOtpController extends GetxController {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Failure,
-        title: 'Error',
-        description: 'Failed to resend OTP. Please try again.',
+        title: 'Error'.tr,
+        description: 'Failed to resend OTP. Please try again.'.tr,
       );
     } finally {
       isLoadingResendOtp.value = false;

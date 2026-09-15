@@ -77,7 +77,7 @@ class VerifyOtpScreen extends StatelessWidget {
         children: [
           SizedBox(height: R.h(44)),
           Text(
-            'We’ve the code send to your email'.tr,
+            'We’ve sent a code to your email'.tr,
             style: CustomTextStyles.medium16.copyWith(
               color: CustomColors.textGray(),
             ),
@@ -213,7 +213,7 @@ class VerifyOtpScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Didn’t receive code? '.tr,
+                '${'Didn’t receive code?'.tr} ',
                 style: CustomTextStyles.medium16.copyWith(
                   color: CustomColors.textGray(),
                 ),

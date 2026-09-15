@@ -61,8 +61,7 @@ class PaginationView<T> extends StatelessWidget {
             slivers: [
               SliverFillRemaining(
                 hasScrollBody: false,
-                child:
-                    emptyWidget ?? const Center(child: Text('No Data Found')),
+                child: emptyWidget ?? Center(child: Text('No data found'.tr)),
               ),
             ],
           ),
@@ -224,8 +223,7 @@ class PaginationGridView<T> extends StatelessWidget {
             slivers: [
               SliverFillRemaining(
                 hasScrollBody: false,
-                child:
-                    emptyWidget ?? const Center(child: Text('No Data Found')),
+                child: emptyWidget ?? Center(child: Text('No data found'.tr)),
               ),
             ],
           ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_starter/app/themes/app_theme.dart';
 import 'package:flutter_starter/app/utils/constants/app_colors.dart';
 import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
+import 'package:get/get.dart';
 
 class CustomTextRow extends StatelessWidget {
   final String label;
@@ -28,7 +29,7 @@ class CustomTextRow extends StatelessWidget {
               ),
             ),
             TextSpan(
-              text: isEmptyValue ? 'No value provided' : value,
+              text: isEmptyValue ? 'No value provided'.tr : value,
               style: CustomTextStyles.regular16.copyWith(
                 color: isEmptyValue
                     ? CustomColors.primary()

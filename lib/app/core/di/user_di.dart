@@ -124,6 +124,7 @@ class UserDi extends GetxController {
       CacheManager.removeUserType(),
       CacheManager.removeIsGuest(),
       CacheManager.removeRoles(),
+      CacheManager.removeLoginEmail(),
     ]);
     log('User data cleared');
     update();

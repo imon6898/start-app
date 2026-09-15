@@ -9,7 +9,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class CustomCountryPicker extends StatefulWidget {
   final String? textHeading;
-  final String? hintText;
   final Function(Country country)? onCountryChanged;
   final Country? initialCountry;
   final bool required;
@@ -25,8 +24,7 @@ class CustomCountryPicker extends StatefulWidget {
 
   const CustomCountryPicker({
     super.key,
-    this.textHeading = 'Country',
-    this.hintText = 'Select Country',
+    this.textHeading,
     this.onCountryChanged,
     this.initialCountry,
     this.required = false,
@@ -143,7 +141,7 @@ class _CustomCountryPickerState extends State<CustomCountryPicker>
                     });
                   },
                   decoration: InputDecoration(
-                    hintText: 'Search country...',
+                    hintText: 'Search country...'.tr,
                     hintStyle: CustomTextStyles.regular14.copyWith(
                       color: CustomColors.gray2(),
                     ),
@@ -304,7 +302,7 @@ class _CustomCountryPickerState extends State<CustomCountryPicker>
     }
 
     if (widget.required && (value == null || value.trim().isEmpty)) {
-      return 'Please select a country';
+      return 'Please select a country'.tr;
     }
 
     return null;
@@ -320,7 +318,7 @@ class _CustomCountryPickerState extends State<CustomCountryPicker>
             text: TextSpan(
               style: CustomTextStyles.bold14,
               children: <TextSpan>[
-                TextSpan(text: widget.textHeading),
+                TextSpan(text: widget.textHeading ?? 'Country'.tr),
                 if (widget.required)
                   TextSpan(
                     text: ' *',

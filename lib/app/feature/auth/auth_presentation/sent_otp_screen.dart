@@ -115,7 +115,7 @@ class SentOtpScreen extends StatelessWidget {
           if (controller.sentOtpType == 'email') ...[
             CustomTextField(
               controller: controller.sentOtpController,
-              hintText: 'Enter email address'.tr,
+              hintText: 'Enter your email'.tr,
               inputType: TextInputType.emailAddress,
               validator: Validators.emailValidator.call,
             ),

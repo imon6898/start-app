@@ -307,7 +307,7 @@ class _CustomSelectSectionState<T> extends State<CustomSelectSection<T>> {
                           child: Padding(
                             padding: EdgeInsets.symmetric(vertical: R.h(16)),
                             child: Text(
-                              'Not found',
+                              'Not found'.tr,
                               style: CustomTextStyles.regular14,
                             ),
                           ),
@@ -481,7 +481,7 @@ class _CustomSelectSectionState<T> extends State<CustomSelectSection<T>> {
                                       controller: _searchController,
                                       onChanged: _filterItems,
                                       decoration: InputDecoration(
-                                        hintText: 'Search...',
+                                        hintText: 'Search...'.tr,
                                         border: InputBorder.none,
                                         hintStyle: TextStyle(
                                           color: CustomColors.black(),
@@ -606,7 +606,7 @@ class _CustomSelectSectionState<T> extends State<CustomSelectSection<T>> {
                                             vertical: R.h(6),
                                             horizontal: R.w(6),
                                           ),
-                                          hintText: 'Search...',
+                                          hintText: 'Search...'.tr,
                                           hintStyle: TextStyle(
                                             color: Colors.grey[500],
                                             fontSize: R.sp(14),

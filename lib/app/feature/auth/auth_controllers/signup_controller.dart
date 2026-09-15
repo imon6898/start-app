@@ -73,8 +73,8 @@ class SignupController extends GetxController {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Failure,
-        title: 'Error',
-        description: 'Passwords do not match',
+        title: 'Error'.tr,
+        description: 'Passwords do not match.'.tr,
       );
       return;
     }
@@ -103,9 +103,9 @@ class SignupController extends GetxController {
         showCustomSnackBar(
           context: Get.context!,
           type: SnackBarType.Success,
-          title: 'Success',
+          title: 'Success'.tr,
           description:
-              'Account created successfully. Please verify your email.',
+              'Account created successfully. Please verify your email.'.tr,
         );
 
         // Navigate to OTP verification screen
@@ -124,16 +124,16 @@ class SignupController extends GetxController {
         showCustomSnackBar(
           context: Get.context!,
           type: SnackBarType.Failure,
-          title: 'Error',
-          description: 'Failed to create account. Please try again.',
+          title: 'Error'.tr,
+          description: 'Failed to create account. Please try again.'.tr,
         );
       }
     } catch (e) {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Failure,
-        title: 'Error',
-        description: 'Failed to create account. Please try again.',
+        title: 'Error'.tr,
+        description: 'Failed to create account. Please try again.'.tr,
       );
     } finally {
       isLoadingCreateNewAccount.value = false;
@@ -145,8 +145,8 @@ class SignupController extends GetxController {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: 'Accept Terms',
-        description: 'Please accept terms and conditions',
+        title: 'Accept terms'.tr,
+        description: 'Please accept terms'.tr,
       );
       return;
     }
@@ -161,8 +161,8 @@ class SignupController extends GetxController {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Success,
-        title: 'Success',
-        description: 'Account created with Google successfully',
+        title: 'Success'.tr,
+        description: 'Account created successfully'.tr,
       );
 
       // Navigate to dashboard
@@ -171,8 +171,8 @@ class SignupController extends GetxController {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Failure,
-        title: 'Error',
-        description: 'Google sign-up failed. Please try again.',
+        title: 'Error'.tr,
+        description: 'Google sign in failed. Please try again.'.tr,
       );
     } finally {
       isLoadingGoogleSignIn.value = false;
@@ -184,8 +184,8 @@ class SignupController extends GetxController {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Warning,
-        title: 'Accept Terms',
-        description: 'Please accept terms and conditions',
+        title: 'Accept terms'.tr,
+        description: 'Please accept terms'.tr,
       );
       return;
     }
@@ -200,8 +200,8 @@ class SignupController extends GetxController {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Success,
-        title: 'Success',
-        description: 'Account created with Apple successfully',
+        title: 'Success'.tr,
+        description: 'Account created successfully'.tr,
       );
 
       // Navigate to dashboard
@@ -210,8 +210,8 @@ class SignupController extends GetxController {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Failure,
-        title: 'Error',
-        description: 'Apple sign-up failed. Please try again.',
+        title: 'Error'.tr,
+        description: 'Apple sign in failed. Please try again.'.tr,
       );
     } finally {
       isLoadingAppleSignIn.value = false;

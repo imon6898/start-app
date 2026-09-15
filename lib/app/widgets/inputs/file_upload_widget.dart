@@ -8,6 +8,7 @@ import 'package:flutter_starter/app/utils/constants/app_colors.dart';
 import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
 import 'package:flutter_starter/app/utils/responsive_utils.dart';
 import 'package:flutter_starter/app/widgets/media/custom_image.dart';
+import 'package:get/get.dart';
 
 class FileUploadWidget extends StatelessWidget {
   final String? title;
@@ -106,7 +107,7 @@ class FileUploadWidget extends StatelessWidget {
             ),
             SizedBox(height: R.h(8)),
             Text(
-              'Click or drag file to upload',
+              'Click or drag file to upload'.tr,
               style: CustomTextStyles.medium14.copyWith(
                 color: CustomColors.textGray(),
               ),
@@ -168,7 +169,7 @@ class FileUploadWidget extends StatelessWidget {
                 ),
                 SizedBox(height: R.h(2)),
                 Text(
-                  'Uploaded • Tap to replace',
+                  'Uploaded • Tap to replace'.tr,
                   style: CustomTextStyles.regular10.copyWith(
                     color: CustomColors.successGreen(),
                   ),

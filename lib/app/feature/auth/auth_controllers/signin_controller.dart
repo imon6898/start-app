@@ -8,6 +8,7 @@ import 'package:flutter_starter/app/core/models/base_response.dart';
 import 'package:flutter_starter/app/feature/auth/auth_logic/auth_api_service.dart';
 import 'package:flutter_starter/app/feature/auth/auth_models/auth_response.dart';
 import 'package:flutter_starter/app/routes/app_routes.dart';
+import 'package:flutter_starter/app/services/domain/dev_tools.dart';
 import 'package:flutter_starter/app/services/local_data/cache_manager.dart';
 import 'package:flutter_starter/app/widgets/feedback/custom_snack_bar.dart';
 
@@ -37,27 +38,17 @@ class SigninController extends GetxController {
   final _authRepo = AuthRepo();
   RxBool rememberMe = true.obs;
 
+  /// Restores the email only. Never the password — see [CacheManager].
   void _loadSavedCredentials() async {
     try {
       final savedEmail = CacheManager.getLoginEmail ?? '';
-      final savedPassword = CacheManager.getLoginPassword ?? '';
-
       if (savedEmail.isNotEmpty) {
         emailController.text = savedEmail;
-      }
-      if (savedPassword.isNotEmpty) {
-        passwordController.text = savedPassword;
-      }
-
-      // If there are saved credentials, enable remember me
-      if (savedEmail.isNotEmpty || savedPassword.isNotEmpty) {
         rememberMe.value = true;
       }
-
       update();
     } catch (e) {
-      // Handle error silently or show debug message
-      debugPrint('Error loading saved credentials: $e');
+      devPrint('Could not load saved email: $e');
     }
   }
 
@@ -110,16 +101,17 @@ class SigninController extends GetxController {
               if (otpBaseResponse.statusCode == 201) {
                 showCustomSnackBar(
                   context: Get.context!,
-                  title: 'warning'.tr,
+                  title: 'Warning'.tr,
                   description:
-                      'Please verify your email to continue. OTP has been sent to your email.',
+                      'Please verify your email to continue. OTP has been sent to your email.'
+                          .tr,
                   type: SnackBarType.Warning,
                 );
               } else {
                 showCustomSnackBar(
                   context: Get.context!,
-                  title: 'Error',
-                  description: 'Failed to send OTP. Please try again.',
+                  title: 'Error'.tr,
+                  description: 'Failed to send OTP. Please try again.'.tr,
                   type: SnackBarType.Failure,
                 );
               }
@@ -141,20 +133,19 @@ class SigninController extends GetxController {
             await Get.find<UserDi>().clearGuestMode();
             await Get.find<UserDi>().refreshUser();
 
+            // Email only. The session lives on the refresh token, which is
+            // revocable; a stored password is not.
             if (rememberMe.value) {
               await CacheManager.setLoginEmail(emailController.text);
-              await CacheManager.setLoginPassword(passwordController.text);
             } else {
-              // Clear saved credentials if remember me is unchecked
               await CacheManager.removeLoginEmail();
-              await CacheManager.removeLoginPassword();
             }
 
             // User is verified, go to dashboard
             showCustomSnackBar(
               context: Get.context!,
-              title: 'Success',
-              description: 'Login successful',
+              title: 'Success'.tr,
+              description: 'Login successful'.tr,
               type: SnackBarType.Success,
             );
 
@@ -172,8 +163,8 @@ class SigninController extends GetxController {
 
           showCustomSnackBar(
             context: Get.context!,
-            title: 'Authentication failed',
-            description: 'Please check your credentials',
+            title: 'Authentication failed'.tr,
+            description: 'Please check your credentials'.tr,
             //baseResponse.message,
             type: SnackBarType.Failure,
           );
@@ -184,8 +175,8 @@ class SigninController extends GetxController {
 
         showCustomSnackBar(
           context: Get.context!,
-          title: 'Error',
-          description: 'Please fill in all fields',
+          title: 'Error'.tr,
+          description: 'Please fill in all fields'.tr,
           type: SnackBarType.Failure,
         );
       }
@@ -193,8 +184,8 @@ class SigninController extends GetxController {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Failure,
-        title: 'Error',
-        description: 'Sign in failed. Please try again.',
+        title: 'Error'.tr,
+        description: 'Sign in failed. Please try again.'.tr,
       );
     } finally {
       isLoadingSignIn.value = false;
@@ -214,8 +205,8 @@ class SigninController extends GetxController {
       showCustomSnackBar(
         context: Get.context!,
         type: SnackBarType.Failure,
-        title: 'Error',
-        description: 'Google sign in failed. Please try again.',
+        title: 'Error'.tr,
+        description: 'Google sign in failed. Please try again.'.tr,
       );
     } finally {
       isLoadingGoogleSignIn.value = false;
@@ -237,8 +228,8 @@ class SigninController extends GetxController {
 
       showCustomSnackBar(
         context: Get.context!,
-        title: 'Error',
-        description: 'An error occurred: ${e.toString()}',
+        title: 'Error'.tr,
+        description: 'Something went wrong. Please try again.'.tr,
         type: SnackBarType.Failure,
       );
     } finally {

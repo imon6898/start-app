@@ -8,10 +8,11 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 void showDeleteConfirmationDialog({
   required VoidCallback onConfirm,
-  String title = 'Sure about Deleting!',
-  String message = "Once you Delete this you can't restore",
-  String confirmText = 'Delete',
-  String cancelText = 'Cancel',
+  // Nullable, not defaulted — a default value must be const, and `.tr` isn't.
+  String? title,
+  String? message,
+  String? confirmText,
+  String? cancelText,
 }) {
   Get.dialog(
     Dialog(
@@ -28,7 +29,7 @@ void showDeleteConfirmationDialog({
                 Icon(LucideIcons.triangleAlert, color: CustomColors.error()),
                 SizedBox(width: R.w(8)),
                 Text(
-                  title,
+                  title ?? 'Delete this item?'.tr,
                   style: CustomTextStyles.medium18.copyWith(
                     color: CustomColors.error(),
                   ),
@@ -37,7 +38,7 @@ void showDeleteConfirmationDialog({
             ),
             SizedBox(height: R.h(12)),
             Text(
-              message,
+              message ?? 'Once you delete this you can’t restore it.'.tr,
               textAlign: TextAlign.center,
               style: CustomTextStyles.regular14.copyWith(
                 color: CustomColors.paragraph(),
@@ -52,7 +53,7 @@ void showDeleteConfirmationDialog({
                     borderRadius: 8,
                     height: R.h(22),
                     onPressed: () => Navigator.of(Get.overlayContext!).pop(),
-                    text: cancelText,
+                    text: cancelText ?? 'Cancel'.tr,
                     textStyle: CustomTextStyles.medium16.copyWith(
                       color: CustomColors.black(),
                     ),
@@ -69,7 +70,7 @@ void showDeleteConfirmationDialog({
                       Navigator.of(Get.overlayContext!).pop();
                       onConfirm();
                     },
-                    text: confirmText,
+                    text: confirmText ?? 'Delete'.tr,
                     padding: const EdgeInsets.symmetric(vertical: 4),
                   ),
                 ),

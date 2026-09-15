@@ -1,5 +1,6 @@
 import 'package:flutter_starter/app/utils/constants/app_fonts.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class ThinkingDots extends StatefulWidget {
   final String? title;
@@ -49,7 +50,7 @@ class _ThinkingDotsState extends State<ThinkingDots>
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(widget.title ?? 'Thinking', style: CustomTextStyles.medium12),
+        Text(widget.title ?? 'Thinking'.tr, style: CustomTextStyles.medium12),
         const SizedBox(width: 4),
         Row(
           children: List.generate(

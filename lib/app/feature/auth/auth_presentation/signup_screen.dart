@@ -23,7 +23,7 @@ class SignupScreen extends StatelessWidget {
       builder: (c) {
         return Scaffold(
           backgroundColor: CustomColors.BGColor(),
-          appBar: AppBarWidget(title: 'Create new account'),
+          appBar: AppBarWidget(title: 'Create Account'.tr),
           body: _body(context, c),
         );
       },
@@ -77,8 +77,8 @@ class SignupScreen extends StatelessWidget {
                 flex: 5,
                 child: CustomTextField(
                   controller: controller.firstNameCtr,
-                  textHeading: 'First name',
-                  hintText: 'Enter first name',
+                  textHeading: 'First Name'.tr,
+                  hintText: 'Enter your first name'.tr,
                   required: true,
                   inputType: TextInputType.name,
                   validator: Validators.nameValidator.call,
@@ -89,8 +89,8 @@ class SignupScreen extends StatelessWidget {
                 flex: 5,
                 child: CustomTextField(
                   controller: controller.lastNameCtr,
-                  textHeading: 'Last name',
-                  hintText: 'Enter last name',
+                  textHeading: 'Last Name'.tr,
+                  hintText: 'Enter your last name'.tr,
                   required: true,
                   inputType: TextInputType.name,
                   validator: Validators.nameValidator.call,
@@ -100,16 +100,16 @@ class SignupScreen extends StatelessWidget {
           ),
           CustomTextField(
             controller: controller.emailRegCtr,
-            textHeading: 'Email',
-            hintText: 'Enter email',
+            textHeading: 'Email'.tr,
+            hintText: 'Enter your email'.tr,
             required: true,
             inputType: TextInputType.emailAddress,
             validator: Validators.emailValidator.call,
           ),
           CustomPhoneTextField(
             controller: controller.mobileNumberCtr,
-            textHeading: 'Phone',
-            hintText: 'Enter phone number',
+            textHeading: 'Phone'.tr,
+            hintText: 'Enter phone number'.tr,
             required: true,
             validator: Validators.phoneValidatorFor(
               countryCode: controller.selectedCountry?.code,
@@ -128,8 +128,8 @@ class SignupScreen extends StatelessWidget {
 
           CustomTextField(
             controller: controller.passwordRegCtr,
-            textHeading: 'Password',
-            hintText: 'Enter password',
+            textHeading: 'Password'.tr,
+            hintText: 'Enter password'.tr,
             isPassword: true,
             required: true,
             inputType: TextInputType.visiblePassword,
@@ -137,8 +137,8 @@ class SignupScreen extends StatelessWidget {
           ),
           CustomTextField(
             controller: controller.confirmPasswordRegCtr,
-            textHeading: 'Confirm password',
-            hintText: 'Enter confirm password',
+            textHeading: 'Confirm Password'.tr,
+            hintText: 'Enter confirm password'.tr,
             isPassword: true,
             required: true,
             inputType: TextInputType.visiblePassword,
@@ -343,7 +343,7 @@ class SignupScreen extends StatelessWidget {
         child: Opacity(
           opacity: isDisabled ? 0.5 : 1.0,
           child: CustomOutlinedButton(
-            text: 'Login With Apple'.tr,
+            text: 'Login with Apple'.tr,
             textStyle: CustomTextStyles.medium12,
             loading: controller.isLoadingAppleSignIn.value,
             onPressed: isDisabled
@@ -369,7 +369,7 @@ class SignupScreen extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          'Already have an account?',
+          'Already have an account?'.tr,
           style: CustomTextStyles.medium14.copyWith(
             color: CustomColors.textGray(),
           ),
