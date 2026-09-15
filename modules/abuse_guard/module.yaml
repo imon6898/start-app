@@ -1,0 +1,84 @@
+name: abuse_guard
+description: >-
+  Client-side guards that stop your own app generating abusive traffic -
+  persisted cooldowns, debounce/throttle, single-flight double-submit guard,
+  escalating failed-login lockout - plus a provider-agnostic CAPTCHA hook with a
+  WebView-backed Cloudflare Turnstile implementation.
+
+# Copy each path from modules/abuse_guard/<path> to <path> in the project.
+files:
+  - lib/app/core/helpers/action_throttle.dart
+  - lib/app/core/helpers/attempt_limiter.dart
+  - lib/app/services/captcha_service.dart
+  - lib/app/widgets/feedback/captcha_challenge_sheet.dart
+
+dependencies:
+  webview_flutter: ^4.9.0
+
+# Already in core, no action needed: get, shared_preferences, flutter_dotenv.
+
+env:
+  TURNSTILE_SITE_KEY: >-
+    Cloudflare Turnstile site key. Read via Env.optional('TURNSTILE_SITE_KEY').
+    Leave it unset and TurnstileCaptchaService returns null instead of prompting.
+  TURNSTILE_HOST: >-
+    Optional. Origin the inline challenge HTML claims, default https://localhost.
+    Must be listed in the Turnstile widget's allowed hostnames.
+  TURNSTILE_CHALLENGE_URL: >-
+    Optional. A challenge page you host yourself. When set it is loaded instead
+    of the inline HTML - more reliable than a synthesised origin.
+
+setup:
+  - >-
+    action_throttle.dart and attempt_limiter.dart need no registration - build
+    them inside the controller that owns them and dispose() in onClose().
+  - >-
+    Register the captcha service once, in ViewModelBinding.dependencies() or
+    lib/bootstrap.dart:
+    Get.put<CaptchaService>(TurnstileCaptchaService(), permanent: true);
+    Use NoCaptchaService() in dev or until the backend verifies tokens.
+  - >-
+    Optional eager init so a restored cooldown is readable on the first frame.
+    lib/bootstrap.dart, immediately after await CacheManager.init():
+    await GuardCache.init();   (NOT main() - main() is a one-liner here.)
+
+platform_config:
+  android: |
+    INTERNET permission in android/app/src/main/AndroidManifest.xml:
+      <uses-permission android:name="android.permission.INTERNET"/>
+    minSdk 21+ and compileSdk 34+ (webview_flutter_android requirement).
+    No manifest changes are needed for the cooldown/lockout helpers.
+  ios: |
+    webview_flutter_wkwebview 3.26.1 (what ^4.9.0 resolves to today) needs
+    deployment target iOS 13.0 - the template is already on 13.0, so no change.
+    Separately, `flutter build ios` fails on this template before webview is
+    even reached: file_picker_darwin (a core dep) needs iOS 14. Raise the
+    Podfile and the three IPHONEOS_DEPLOYMENT_TARGET entries to 14.0 to build.
+    No Info.plist keys and no AppDelegate changes; WKWebView needs none for an
+    https challenge page. Then: cd ios && pod install
+  notes: |
+    Only captcha_service.dart and captcha_challenge_sheet.dart need webview_flutter.
+    Install just the two helper files if you do not want the CAPTCHA at all.
+
+notes: >-
+  These guards are honesty-limited by design. They make a well-behaved client
+  and degrade gracefully, but they cannot enforce anything: a modified app skips
+  them and a script never runs them. Rate limiting, account lockout and CAPTCHA
+  verification must all be enforced server-side. Cooldown and lockout state
+  lives in SharedPreferences under a "guard." prefix, so CacheManager.removeAll()
+  on logout wipes it, and expiry is wall-clock based - changing the device clock
+  clears a cooldown. The Turnstile challenge is a WebView page because no
+  well-maintained first-party Flutter plugin for Turnstile or reCAPTCHA exists;
+  the injected JS follows Cloudflare's documented explicit-render API and should
+  be re-checked against their current docs before shipping.
+
+core_dependencies:
+  - lib/app/core/config/env.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/services/local_data/cache_manager.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/widgets/buttons/custom_primary_button.dart
+  - lib/app/widgets/feedback/thinking_dots.dart
+  - lib/app/widgets/layout/custom_bottom_sheet.dart

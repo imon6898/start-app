@@ -1,0 +1,137 @@
+name: app_attestation
+description: >-
+  Device attestation plus TLS public-key pinning. Play Integrity (Android) and
+  App Attest/DeviceCheck (iOS) produce a token your BACKEND verifies with
+  Google/Apple, attached by a Dio interceptor to opted-in sensitive endpoints
+  only. CertPinning replaces the badCertificateCallback TLS bypass in
+  api_service.dart with SPKI pinning that fails closed.
+
+# Copy each path from modules/app_attestation/<path> to <path> in the project.
+files:
+  - lib/app/services/attestation_service.dart
+  - lib/app/services/attestation/attestation_token.dart
+  - lib/app/services/attestation/attestation_interceptor.dart
+  - lib/app/services/domain/cert_pinning.dart
+
+dependencies:
+  crypto: ^3.0.7
+
+# Already in core, no action needed: dio, get, shared_preferences, flutter_dotenv.
+
+env:
+  PLAY_INTEGRITY_CLOUD_PROJECT_NUMBER: >-
+    Google Cloud project number linked to the app in Play Console (Release >
+    App integrity). Passed to the native side at warmUp. Not a secret. Empty
+    means Android attestation stays off and every call returns null.
+  CERT_PINNING_ENABLED: >-
+    Optional. Read by your own bootstrap code to decide whether to arm
+    CertPinning. Ship it false until you have verified pins on a real device.
+
+setup:
+  - >-
+    NATIVE CODE IS REQUIRED. There is no verified first-party Flutter package
+    for Play Integrity or App Attest, so this module talks to a MethodChannel.
+    Copy modules/app_attestation/platform/android/AttestationPlugin.kt into
+    android/app/src/main/kotlin/<your/package>/ and
+    modules/app_attestation/platform/ios/AttestationPlugin.swift into
+    ios/Runner/. Without them AttestationService.init() logs "native side not
+    installed" and every tokenFor() returns null.
+  - >-
+    lib/bootstrap.dart, after await Env.load() and CacheManager.init():
+    await AttestationService.to.init();
+  - >-
+    lib/app/services/domain/api_service.dart, inside the constructor, replace
+    the IOHttpClientAdapter block that sets badCertificateCallback with:
+    _dio.httpClientAdapter = CertPinning.adapter();
+  - >-
+    lib/app/services/domain/api_service.dart, immediately after that line, add
+    the interceptor BEFORE the existing token-refresh InterceptorsWrapper:
+    _dio.interceptors.add(AttestationInterceptor(paths: const
+    [ApiConstant.signupUserUri, ApiConstant.loginUri, ApiConstant.sentOtpUri,
+    ApiConstant.reSentOtpUri]));
+
+routes: >-
+  None. This module ships no screens.
+
+bindings: >-
+  None required. AttestationService.to registers itself as permanent on first
+  use, which has to happen in bootstrap before ViewModelBinding runs. To list it
+  anyway, use the guarded form so the bootstrap instance is not replaced:
+  if (!Get.isRegistered<AttestationService>()) Get.put(AttestationService(), permanent: true);
+
+core_dependencies:
+  - lib/app/core/config/env.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/services/domain/api_service.dart
+  - lib/bootstrap.dart
+
+platform_config:
+  android:
+    gradle: >-
+      android/app/build.gradle.kts, in dependencies:
+      implementation("com.google.android.play:integrity:1.5.0")
+      Play Integrity needs minSdk 21 and a build installed from Play (internal
+      testing track counts). Sideloaded debug builds return an error, which is
+      the correct behaviour, not a bug.
+    plugin_registration: >-
+      android/app/src/main/kotlin/<your/package>/MainActivity.kt:
+      override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+      super.configureFlutterEngine(flutterEngine)
+      flutterEngine.plugins.add(AttestationPlugin()) }
+    manifest_permissions:
+      - android.permission.INTERNET
+    console: >-
+      Play Console > Release > App integrity: enable the Integrity API, link the
+      Google Cloud project, and add the release signing key SHA-256. Tokens are
+      only decryptable by that project.
+  ios:
+    capability: >-
+      Xcode > Runner target > Signing and Capabilities > + Capability > App
+      Attest. Set the environment to production for App Store builds. App Attest
+      needs iOS 14 or newer and a physical device; the simulator always fails.
+    plugin_registration: >-
+      ios/Runner/AppDelegate.swift, inside
+      didInitializeImplicitFlutterEngine after the GeneratedPluginRegistrant
+      line: AttestationPlugin.register(with:
+      engineBridge.pluginRegistry.registrar(forPlugin: "AttestationPlugin")!)
+      Add AttestationPlugin.swift to the Runner target in Xcode, or it will not
+      compile into the app.
+    info_plist: >-
+      None. App Attest and DeviceCheck need no usage-description keys.
+  cert_pinning: >-
+    No platform config, but read the rotation warning in the README first. A pin
+    that stops matching bricks every installed client and cannot be fixed by a
+    server change. Configure at least two pins and keep the kill switch on a
+    host you do not pin.
+
+optional_integration: >-
+  Pairs with the api_resilience and abuse_guard modules. Attestation only tells
+  the server who is calling; the server still has to answer 429, and the client
+  still has to back off politely and explain the wait when it does. This module
+  adds no 429 handling. The interceptors do not overlap - this one only sets
+  request headers, api_resilience only handles retries and errors.
+
+notes: >-
+  WHAT THIS IS NOT. Rate limiting and abuse prevention happen on the server. A
+  mobile client cannot enforce them: an attacker patches the app or skips it and
+  calls the API directly. This module only supplies a signal the server can use
+  to tell a real install from a script, and only if the server actually verifies
+  the token with Google/Apple and rejects requests without one. Verifying the
+  token in Dart would be worthless.
+
+  Attestation is quota-limited and slow, which is why the interceptor takes a
+  short path allowlist instead of attaching a token to every call. Play
+  Integrity standard requests are cheap once prepareIntegrityToken has run, but
+  the warm-up itself is rate-limited; Apple throttles App Attest key generation
+  hard, while assertions are cheap. Check the current Google and Apple quota
+  docs before widening the allowlist - the numbers change.
+
+  The interceptor fails OPEN by default: if no token is available it sends
+  X-Attestation-Skipped with a reason instead of blocking the request. That is
+  deliberate. The server decides what an unattested request may do; a client
+  that refuses to send is just a client that logs its users out on a bad day.
+
+  CertPinning pins the LEAF key, because Dart never exposes the full peer chain
+  to Dio - validateCertificate receives only the leaf. To pin an intermediate or
+  private CA instead, pass trustAnchorsPem to CertPinning.configure(), which
+  replaces the system trust store for those connections.

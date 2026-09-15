@@ -1,0 +1,141 @@
+name: app_update_gate
+description: >-
+  Force / soft update gate. Asks YOUR backend for the version contract, compares
+  it against the running build with real SEMVER comparison, then either blocks
+  the app with a non-dismissible screen or offers a dismissible, snoozable sheet.
+  Store launch goes through url_launcher, per platform.
+
+# Copy each path from modules/app_update_gate/<path> to <path> in the project.
+files:
+  - lib/app/feature/app_update/app_update_models/semantic_version.dart
+  - lib/app/feature/app_update/app_update_models/app_update_info.dart
+  - lib/app/feature/app_update/app_update_logic/app_update_api_const.dart
+  - lib/app/feature/app_update/app_update_logic/app_update_api_service.dart
+  - lib/app/feature/app_update/app_update_logic/app_update_store.dart
+  - lib/app/feature/app_update/app_update_controllers/app_update_controller.dart
+  - lib/app/feature/app_update/app_update_presentation/force_update_screen.dart
+  - lib/app/feature/app_update/app_update_presentation/soft_update_sheet.dart
+
+dependencies:
+  package_info_plus: "^10.2.1"
+  url_launcher: "^6.3.2"
+
+# Already in core, no action needed: get, dio, shared_preferences,
+# lucide_icons_flutter. url_launcher is NOT in core - the installer adds it.
+
+setup: |
+  The gate is opt-in: nothing runs until you call it.
+
+  1. Register the controller in lib/app/bindings/view_model_binding.dart:
+       _lazy<AppUpdateController>(() => AppUpdateController());
+     plus the import
+       '../feature/app_update/app_update_controllers/app_update_controller.dart'.
+
+  2. Run it once the app has a navigator, WITHOUT awaiting it. The splash
+     controller is the natural place - last line of the try block in
+     _routeFromSession(), after the Get.offAllNamed branches:
+       Get.find<AppUpdateController>().runGate();
+
+     Awaiting it there holds the splash behind an HTTP call and breaks the
+     shipped test/widget/app_boot_test.dart. runGate() pushes ForceUpdateScreen
+     with Get.offAll itself, so it takes over the stack when it decides.
+
+     A bootstrap.dart call also works, but only with showUi: false - there is no
+     Navigator before runApp():
+       unawaited(Get.find<AppUpdateController>().runGate(showUi: false));
+
+  3. Point AppUpdateApiConst.versionGateUri at your real endpoint.
+
+  Failure is always open: a network error, an unparseable payload or a missing
+  version resolves to AppUpdateAction.none. A broken gate must never lock users
+  out of the app.
+
+routes: >-
+  Not required - runGate() pushes the blocking screen with
+  Get.offAll(() => const ForceUpdateScreen()), so the module installs without
+  touching the router. For a named route add to AppRoutes:
+  static const String ForceUpdateScreen = '/forceUpdateScreen';
+  and to AppPages.pages:
+  _page(AppRoutes.ForceUpdateScreen, () => const ForceUpdateScreen()).
+  Then swap the Get.offAll call for Get.offAllNamed(AppRoutes.ForceUpdateScreen),
+  import app_routes.dart in the controller and delete its now-unused
+  force_update_screen.dart import - unused_import is an error in this template.
+
+bindings: >-
+  lib/app/bindings/view_model_binding.dart - both screens use
+  GetBuilder<AppUpdateController>, so they throw on first build without
+  _lazy<AppUpdateController>(() => AppUpdateController());
+
+platform_config:
+  android: |
+    url_launcher needs a <queries> block in AndroidManifest.xml so the Play
+    Store link can be resolved on Android 11+ (API 30). Put it as a direct
+    child of <manifest>, next to the <application> element:
+      <queries>
+        <intent>
+          <action android:name="android.intent.action.VIEW"/>
+          <data android:scheme="https"/>
+        </intent>
+        <intent>
+          <action android:name="android.intent.action.VIEW"/>
+          <data android:scheme="market"/>
+        </intent>
+      </queries>
+    Nothing else: package_info_plus reads versionName/versionCode straight from
+    the built APK and needs no permission.
+  ios: |
+    url_launcher needs LSApplicationQueriesSchemes in ios/Runner/Info.plist:
+      <key>LSApplicationQueriesSchemes</key>
+      <array>
+        <string>https</string>
+        <string>itms-apps</string>
+      </array>
+    package_info_plus reads CFBundleShortVersionString / CFBundleVersion and
+    needs no Info.plist change.
+  notes: |
+    package_info_plus 10.x requires Dart sdk >=3.10.0 and Flutter >=3.38.1
+    (template is on Dart 3.12.2 / Flutter 3.44.8). Neither plugin needs manual
+    registration in MainActivity or AppDelegate.
+
+core_dependencies:
+  - lib/app/bindings/view_model_binding.dart
+  - lib/app/services/domain/api_service.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/platform_utils.dart
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/widgets/buttons/custom_primary_button.dart
+  - lib/app/widgets/feedback/custom_snack_bar.dart
+  - lib/app/widgets/layout/custom_bottom_sheet.dart
+
+notes: |
+  Backend contract - GET {AppUpdateApiConst.versionGateUri}
+  ?platform=android|ios&current_version=1.4.2&build_number=42
+
+  {
+    "min_supported_version": "1.4.0",
+    "latest_version":        "1.10.0",
+    "update_url":            "https://play.google.com/store/apps/details?id=com.you.app",
+    "force":                 false
+  }
+
+  Optional extra keys the parser understands: android_update_url,
+  ios_update_url, ios_app_id, title, message, release_notes (list of strings).
+  camelCase spellings are accepted too. A bare object or a BaseResponse
+  envelope ({ "data": { ... } }) both parse.
+
+  Version comparison is numeric semver, NOT string compare - "1.10.0" sorts
+  above "1.9.0". "1" and "1.4" widen to "1.0.0"/"1.4.0", a leading "v" is
+  tolerated, and build metadata ("1.2.3+45", "1.2.3 (45)") is ignored for
+  precedence. Pre-releases rank below their own release, per semver 2.0.
+
+  Snooze state lives in this module's AppUpdateStore (SharedPreferences keys
+  app_update_snoozed_version / app_update_snoozed_at), so core CacheManager is
+  untouched. The snooze is keyed to the version that was snoozed - a newer
+  release re-arms the sheet immediately. Window defaults to 24h; change it with
+  AppUpdateController.snoozeFor = const Duration(days: 3).
+
+  Local testing without a backend: set AppUpdateController.debugInfo and
+  AppUpdateController.debugCurrentVersion before calling runGate(). See the
+  README for both paths.

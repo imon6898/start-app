@@ -1,0 +1,165 @@
+name: social_auth
+description: >-
+  Google and Apple sign-in for the existing auth feature: a GetxService that
+  collects the provider token, a Repo/Impl/ApiService trio that posts it to YOUR
+  backend, and ready-made buttons. The client result alone is never a login -
+  the backend must verify the token with Google/Apple before issuing a session.
+
+# Copy each path from modules/social_auth/<path> to <path> in the project.
+files:
+  - lib/app/feature/auth/auth_logic/social_auth_api_const.dart
+  - lib/app/feature/auth/auth_logic/social_auth_api_service.dart
+  - lib/app/services/social_auth_service.dart
+  - lib/app/widgets/buttons/social_auth_buttons.dart
+
+dependencies:
+  google_sign_in: "^6.3.0"
+  sign_in_with_apple: "^8.1.0"
+
+# Already in core, no action needed: get, dio, lucide_icons_flutter, flutter_dotenv.
+
+env:
+  GOOGLE_SERVER_CLIENT_ID: >-
+    WEB OAuth client ID from Google Cloud Console. It is the audience of the
+    id_token your backend verifies. Without it Android returns NO id_token.
+  GOOGLE_IOS_CLIENT_ID: >-
+    iOS OAuth client ID. Optional if you set GIDClientID in ios/Runner/Info.plist
+    instead. Ignored on Android.
+  APPLE_SERVICE_ID: >-
+    Apple Services ID (e.g. com.easital.starter.service). Needed only for Apple
+    sign-in on Android/web, never on iOS.
+  APPLE_REDIRECT_URI: >-
+    HTTPS endpoint on your backend that Apple posts the callback to, and which
+    redirects back into the app. Android/web only.
+
+setup: |
+  *** SECURITY CONTRACT - READ BEFORE WIRING ANYTHING UP ***
+
+  1. SocialAuthService only collects a token. It NEVER decides the user is
+     logged in. A client-side "success" proves nothing: an id_token can be
+     forged, replayed, or issued for a different app.
+  2. The backend MUST verify before it issues a session:
+     - Google: validate the id_token signature against Google's JWKS, check
+       `aud` == your server client ID and `iss` == accounts.google.com.
+     - Apple: redeem `authorization_code` with Apple within 5 minutes, validate
+       the identity_token against Apple's JWKS, check `aud` == your bundle ID
+       (iOS) or Services ID (Android/web) and that `nonce` matches what the app
+       sent.
+  3. Apple returns the name and email on the FIRST authorization only. Persist
+     them server-side on first sign-in or they are gone for good.
+  4. Only the session your backend returns goes into CacheManager.setToken.
+
+  Register the service before the sign-in screen can be reached - lib/bootstrap.dart,
+  after `await CacheManager.init();`:
+    Get.put(SocialAuthService(), permanent: true);
+
+  Backend work this module expects:
+  - POST /acc/auth/google -> BaseResponse with data = { access_token,
+    refresh_token, user, roles }  (same envelope as /acc/auth/login)
+  - POST /acc/auth/apple  -> the same envelope
+  Bodies are built by SocialAuthResult.toParams().
+
+bindings: >-
+  None. The module adds no controller - it plugs into the existing
+  SigninController / SignupController, whose signInWithGoogle() and
+  signInWithApple() are TODO stubs today. The README's Wiring section has the
+  replacement bodies.
+
+routes: >-
+  None. No screen is added; the buttons live on the existing SigninScreen and
+  SignupScreen.
+
+platform_config:
+  android: |
+    Google (verified against google_sign_in_android 6.2.1):
+    1. Google Cloud Console -> Credentials: create an ANDROID OAuth client for
+       package com.easital.starter with the SHA-1 of your debug AND release
+       signing keys, plus a WEB OAuth client.
+       Debug SHA-1: cd android && ./gradlew signingReport
+    2. Put the WEB client ID in .env as GOOGLE_SERVER_CLIENT_ID. Android ignores
+       `clientId` and identifies the app by package + SHA-1; without a
+       serverClientId (or a google-services.json providing default_web_client_id)
+       the plugin returns an account but NO id_token.
+    3. No manifest change is needed for Google sign-in.
+
+    Apple (verified against sign_in_with_apple 8.1.0 README):
+    4. MainActivity launchMode must be singleTop or singleTask - the template
+       already sets singleTop, nothing to do.
+    5. Add inside <application> in android/app/src/main/AndroidManifest.xml:
+       <activity
+           android:name="com.aboutyou.dart_packages.sign_in_with_apple.SignInWithAppleCallback"
+           android:exported="true">
+           <intent-filter>
+               <action android:name="android.intent.action.VIEW" />
+               <category android:name="android.intent.category.DEFAULT" />
+               <category android:name="android.intent.category.BROWSABLE" />
+               <data android:scheme="signinwithapple" />
+               <data android:path="callback" />
+           </intent-filter>
+       </activity>
+    6. Your APPLE_REDIRECT_URI endpoint must 302 back to:
+       intent://callback?<urlencoded callback body>#Intent;package=com.easital.starter;scheme=signinwithapple;end
+  ios: |
+    Google (verified against google_sign_in_ios 5.9.0 README):
+    1. ios/Runner/Info.plist:
+       <key>GIDClientID</key>
+       <string>YOUR_IOS_CLIENT_ID</string>
+       <key>GIDServerClientID</key>
+       <string>YOUR_WEB_CLIENT_ID</string>
+    2. Info.plist URL scheme (required even if you pass the IDs from Dart):
+       <key>CFBundleURLTypes</key>
+       <array>
+         <dict>
+           <key>CFBundleTypeRole</key><string>Editor</string>
+           <key>CFBundleURLSchemes</key>
+           <array><string>com.googleusercontent.apps.YOUR_REVERSED_CLIENT_ID</string></array>
+         </dict>
+       </array>
+
+    Apple (verified against sign_in_with_apple 8.1.0 README):
+    3. Requires a PAID Apple Developer Program membership.
+    4. Xcode -> Runner -> Signing & Capabilities -> + Capability ->
+       "Sign in with Apple". Without it the sheet fails with no visible error.
+    5. App ID at developer.apple.com must have the Sign in with Apple capability;
+       refresh provisioning profiles if signing is not automatic.
+    6. iOS 13+ only. SignInWithApple.isAvailable() returns false below that -
+       SocialAuthButtons hides the button accordingly.
+  notes: |
+    macOS also needs the keychain-access-group
+    $(AppIdentifierPrefix)com.google.GIDSignIn for google_sign_in.
+    Web needs Apple's appleid.auth.js script in web/index.html.
+    Neither platform is configured in this template.
+
+core_dependencies:
+  - lib/app/core/config/env.dart
+  - lib/app/services/domain/api_service.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/widgets/buttons/custom_primary_button.dart
+
+notes: |
+  APP STORE REVIEW: guideline 4.8 - if your iOS app offers ANY third-party or
+  social login (Google included), you must also offer Sign in with Apple. Ship
+  both buttons or neither.
+
+  BRAND MARKS: the buttons use LucideIcons.globe and LucideIcons.apple. They are
+  lookalikes, NOT the Google "G" or the Apple logo - no brand SVG ships with this
+  module. Both companies require their own mark, wording and button styling in
+  production. For Apple, sign_in_with_apple exports a compliant
+  SignInWithAppleButton (and AppleLogoPainter) you can drop in instead.
+
+  google_sign_in 7.x is a breaking redesign (GoogleSignIn.instance,
+  initialize(), authenticate()). social_auth_service.dart is written against the
+  6.x API and will NOT compile on 7.x - keep the ^6.3.0 constraint or port the
+  service.
+
+  SocialAuthApiConst duplicates the googleSignInUri / appleSignInUri paths that
+  core's ApiConstant already declares, on purpose: the module stays installable
+  without editing core. Both point at /acc/auth/google and /acc/auth/apple.
+
+  Apple nonce: the raw nonce is sent to Apple AND to your backend. If you prefer
+  the Firebase-style hashed variant, hash it with crypto's sha256 before passing
+  it to signInWithApple() and send the raw value to the backend. That needs the
+  `crypto` package, which this module does not add.

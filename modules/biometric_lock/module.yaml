@@ -1,0 +1,129 @@
+name: biometric_lock
+description: >-
+  Face ID / Touch ID / fingerprint app lock. A BiometricService over local_auth
+  that maps every platform error code to a clear message, plus an app_lock
+  feature that locks on cold start and after a configurable background timeout.
+  Opt-in, off by default, and it disables itself rather than trapping a user
+  whose device can no longer authenticate.
+
+# Copy each path from modules/biometric_lock/<path> to <path> in the project.
+files:
+  - lib/app/services/biometric_service.dart
+  - lib/app/feature/app_lock/app_lock_logic/app_lock_store.dart
+  - lib/app/feature/app_lock/app_lock_controllers/app_lock_controller.dart
+  - lib/app/feature/app_lock/app_lock_presentation/app_lock_gate.dart
+  - lib/app/feature/app_lock/app_lock_presentation/app_lock_screen.dart
+  - lib/app/feature/app_lock/app_lock_presentation/app_lock_settings_screen.dart
+
+dependencies:
+  local_auth: "^2.3.0"
+
+# Already in core, no action needed: get, shared_preferences, lucide_icons_flutter.
+
+setup: |
+  Four core edits. Nothing else in lib/ changes — the module keeps its own
+  prefs keys, so CacheManager is untouched.
+
+  1. lib/bootstrap.dart - read the stored flag before the first frame, so a
+     locked app never flashes its content. Add the import:
+       import 'app/feature/app_lock/app_lock_logic/app_lock_store.dart';
+     and the call right after CacheManager.init():
+       await AppLockStore.init();
+
+  2. lib/app/app.dart - put the lock ABOVE the Navigator. Add the import:
+       import 'feature/app_lock/app_lock_presentation/app_lock_gate.dart';
+     and one line inside GetMaterialApp, next to getPages:
+       builder: (context, child) => AppLockGate(child: child),
+
+  3. See "Bindings to register" below.
+
+  4. See "Routes to register" below (optional - only for the settings screen).
+
+  Registering AppLockController inside ViewModelBinding().dependencies() also
+  puts its WidgetsBindingObserver FIRST in the observer list, which is what lets
+  didPopRoute swallow the Android back button while the app is locked.
+
+bindings: >-
+  lib/app/bindings/view_model_binding.dart - permanent, not lazy: the lifecycle
+  observer has to outlive every route and exist before the first frame. Add the
+  import '../feature/app_lock/app_lock_controllers/app_lock_controller.dart';
+  and, above the // Auth block:
+  if (!Get.isRegistered<AppLockController>()) { Get.put(AppLockController(),
+  permanent: true); }
+  BiometricService registers itself on first use, so it needs no entry.
+
+routes: >-
+  Only needed for the bundled settings screen. In AppRoutes:
+  static const String AppLockSettingsScreen = '/appLockSettingsScreen';
+  and in AppPages.pages:
+  _page(AppRoutes.AppLockSettingsScreen, () => const AppLockSettingsScreen()),
+  plus the import
+  '../feature/app_lock/app_lock_presentation/app_lock_settings_screen.dart'.
+  The lock screen itself is never routed - AppLockGate renders it above the
+  Navigator so no Get.offAllNamed can dismiss it.
+
+platform_config:
+  android: |
+    Verified against local_auth 2.3.0 / local_auth_android 1.0.56.
+    1. MainActivity MUST extend FlutterFragmentActivity. The template's
+       android/app/src/main/kotlin/com/easital/starter/MainActivity.kt reads:
+         import io.flutter.embedding.android.FlutterActivity
+         class MainActivity : FlutterActivity()
+       Change both lines to:
+         import io.flutter.embedding.android.FlutterFragmentActivity
+         class MainActivity : FlutterFragmentActivity()
+       Without this the plugin throws PlatformException('no_fragment_activity').
+    2. android/app/src/main/AndroidManifest.xml - add inside <manifest>:
+         <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    3. android/app/src/main/res/values/styles.xml - LaunchTheme's parent must be
+       an AppCompat theme or the biometric dialog crashes on Android 8 and
+       below. The template uses @android:style/Theme.Light.NoTitleBar; change it
+       to Theme.AppCompat.DayNight (and values-night/styles.xml to match).
+    4. isDeviceSupported() always returns false below SDK 23.
+    5. Full rebuild after these edits - hot reload will not pick them up.
+  ios: |
+    Verified against local_auth 2.3.0 / local_auth_darwin 1.6.1 (iOS 12+).
+    1. ios/Runner/Info.plist - required for Face ID, or iOS shows a "this app
+       has not been updated" dialog instead of the prompt:
+         <key>NSFaceIDUsageDescription</key>
+         <string>Unlock the app with Face ID.</string>
+    2. No entitlement, no permission prompt beyond that key.
+    3. The iOS Simulator can report otherOperatingSystem - test on a device.
+  notes: |
+    macOS and Windows compile but are untested here; the service reports
+    unsupportedPlatform on every other platform instead of throwing.
+
+core_dependencies:
+  - lib/app/routes/app_routes.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/services/local_data/cache_manager.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/platform_utils.dart
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/widgets/appbar_widgets/appbar_widget.dart
+  - lib/app/widgets/buttons/custom_primary_button.dart
+  - lib/app/widgets/feedback/custom_snack_bar.dart
+  - lib/app/widgets/layout/layout_components.dart
+
+notes: |
+  The lock is OFF until the user turns it on, and turning it on or off both
+  require a passing check - AppLockStore.defaultEnabled is false.
+
+  Lockout recovery is the point of this module. If authenticate() comes back
+  with NotAvailable / PasscodeNotSet / no_fragment_activity / an unsupported
+  platform, the controller turns the lock off, lets the user in and warns with a
+  snackbar. Every lock screen also offers "Sign out instead", which clears the
+  session rather than the app. Override AppLockController.onSignOut to redirect.
+
+  biometricOnly stays false everywhere, so the OS prompt itself offers the
+  device PIN / pattern / passcode. local_auth has no "passcode only" mode, so
+  there is no separate button for it.
+
+  Custom prompt strings (AndroidAuthMessages / IOSAuthMessages) would mean
+  importing local_auth_android and local_auth_darwin directly; this module ships
+  the platform defaults instead to keep the dependency list at one package.
+
+  AppLockGate renders above the Navigator, so the lock screen must never call
+  Get.dialog / Get.snackbar / Navigator.of - those are routes and would appear
+  underneath it. It uses ScaffoldMessenger and inline confirmation instead.

@@ -1,0 +1,146 @@
+name: push_notifications
+description: >-
+  Firebase Cloud Messaging with flutter_local_notifications: permission request
+  (iOS + Android 13 POST_NOTIFICATIONS), token retrieval/refresh POSTed to YOUR
+  backend, foreground messages rendered on a high-importance Android channel,
+  and notification taps routed onto AppRoutes for both cold and warm starts.
+
+# Copy each path from modules/push_notifications/<path> to <path> in the project.
+files:
+  - lib/app/services/push_notifications/push_notification_config.dart
+  - lib/app/services/push_notifications/push_payload.dart
+  - lib/app/services/push_notifications/push_notification_api_const.dart
+  - lib/app/services/push_notifications/push_notification_api_service.dart
+  - lib/app/services/push_notification_service.dart
+
+dependencies:
+  firebase_core: "^4.14.0"
+  firebase_messaging: "^16.6.0"
+  flutter_local_notifications: "^21.0.0"
+
+# Already in core, no action needed: get, dio, shared_preferences.
+
+setup: |
+  lib/bootstrap.dart - inside runZonedGuarded, after `await CacheManager.init();`
+  and BEFORE `runApp(const App())`:
+
+    await Firebase.initializeApp();
+    await Get.putAsync(() => PushNotificationService().init());
+
+  plus the imports:
+    import 'package:firebase_core/firebase_core.dart';
+    import 'package:get/get.dart';
+    import 'app/services/push_notification_service.dart';
+
+  Firebase.initializeApp() with no options reads google-services.json /
+  GoogleService-Info.plist. If you ran `flutterfire configure`, pass the
+  generated options instead:
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  After a successful sign-in (the token is only POSTed once a session exists):
+    await PushNotificationService.to.syncToken();
+
+  On logout, before clearing the cache:
+    await PushNotificationService.to.unregisterToken();
+
+  Backend work this module expects:
+  - POST /notify/devices/register   body { token, platform }
+  - POST /notify/devices/unregister body { token, platform }
+  Both are relative paths on ApiService's base URL and send the session bearer
+  token, so the backend knows which user the device belongs to.
+
+bindings: >-
+  None. PushNotificationService is a GetxService registered in bootstrap.dart
+  with Get.putAsync, not a screen controller - do not add it to
+  ViewModelBinding.
+
+routes: >-
+  No new routes. The tap handler resolves the payload's "route" value through
+  PushRoutes in push_notification_config.dart, which only ever returns
+  constants that already exist in AppRoutes. Add a slug there for every screen
+  a push should be able to open.
+
+platform_config:
+  firebase_console: |
+    1. Create the Firebase project, then add an Android app with the
+       applicationId from android/app/build.gradle.kts (com.easital.starter)
+       and an iOS app with the same bundle id.
+    2. Download google-services.json  -> android/app/google-services.json
+    3. Download GoogleService-Info.plist -> ios/Runner/GoogleService-Info.plist,
+       added to the Runner target through Xcode (drag it in, "Copy items if
+       needed"), NOT by copying the file on disk alone.
+    4. Both files are project secrets - gitignore them if the repo is public.
+  android: |
+    1. android/settings.gradle.kts - add to the plugins block:
+         id("com.google.gms.google-services") version "4.4.4" apply false
+    2. android/app/build.gradle.kts - add to its plugins block, after the
+       Android plugin and before the Flutter one:
+         id("com.google.gms.google-services")
+    3. AndroidManifest.xml - inside <manifest>:
+         <uses-permission android:name="android.permission.INTERNET"/>
+         <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    4. Inside <application>, so system-tray notifications land on the module's
+       channel with the right icon:
+         <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id"
+                    android:value="high_importance_channel"/>
+         <meta-data android:name="com.google.firebase.messaging.default_notification_icon"
+                    android:resource="@mipmap/ic_launcher"/>
+    5. minSdk 24 and compileSdk 36 are required (flutter_local_notifications 21).
+       The template resolves flutter.minSdkVersion=24 and compileSdkVersion=36,
+       so nothing to change.
+    6. Release builds shrink resources: keep the notification icon via
+       android/app/src/main/res/raw/keep.xml or it silently fails to show.
+  ios: |
+    1. Xcode > Runner > Signing & Capabilities: add "Push Notifications" and
+       "Background Modes" with Remote notifications ticked.
+    2. Apple Developer > Keys: create an APNs Auth Key (.p8), then upload it in
+       Firebase Console > Project settings > Cloud Messaging > APNs, with your
+       Key ID and Team ID. Without it iOS gets a token but never a message.
+    3. This template uses the UIScene lifecycle (SceneDelegate.swift +
+       FlutterImplicitEngineDelegate). Apple requires the notification-centre
+       delegate to be set before didFinishLaunchingWithOptions returns, so add
+       to ios/Runner/AppDelegate.swift:
+         import firebase_messaging
+         import flutter_local_notifications
+       in application(_:didFinishLaunchingWithOptions:), before the super call:
+         FLTFirebaseMessagingPlugin.configureNotificationCenterDelegate()
+       in didInitializeImplicitFlutterEngine(_:), before the existing register:
+         FlutterLocalNotificationsPlugin.setPluginRegistrantCallback { registry in
+           GeneratedPluginRegistrant.register(with: registry)
+         }
+    4. ios/Podfile - uncomment the platform line so it reads
+         platform :ios, '13.0'
+       then: cd ios && pod install
+    5. Push does not work on the iOS Simulator - test on a device.
+  notes: |
+    Verified against firebase_core 4.14.0, firebase_messaging 16.6.0 and
+    flutter_local_notifications 21.0.0 resolved from the pub cache; the module
+    analyses clean against the template core. The google-services Gradle plugin
+    version (4.4.4) was not verifiable offline - check the current one at
+    firebase.google.com/docs/android/setup.
+
+core_dependencies:
+  - lib/app/routes/app_routes.dart
+  - lib/app/services/domain/api_service.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/services/local_data/cache_manager.dart
+
+notes: |
+  pushBackgroundHandler and pushBackgroundTapHandler MUST stay top-level
+  functions annotated with @pragma('vm:entry-point'). Firebase runs them in a
+  fresh isolate; making them class methods or closures, or dropping the
+  annotation, breaks them in release builds with no error.
+
+  The background isolate has no GetX and no navigator - it cannot navigate. A
+  tap on a backgrounded/killed app is replayed through getInitialMessage() or
+  getNotificationAppLaunchDetails() on the next launch instead.
+
+  Foreground iOS banners are turned off
+  (setForegroundNotificationPresentationOptions alert:false) because the module
+  draws the notification itself. Leaving them on shows every message twice.
+
+  Data-only messages (no `notification` block) are not rendered - handle them in
+  showForeground or listen to FirebaseMessaging.onMessage yourself.
+
+  PushApiConst is standalone, so installing this module needs no edit to the
+  core lib/app/services/domain/api_const.dart.

@@ -1,0 +1,98 @@
+name: crash_analytics
+description: >-
+  Crash reporting and error analytics behind a provider-agnostic GetxService.
+  Ships one Sentry implementation, a PII scrubber that strips tokens, emails and
+  phone numbers before send, and slots into the FlutterError/runZonedGuarded
+  hooks bootstrap.dart already has. Release-only by default.
+
+# Copy each path from modules/crash_analytics/<path> to <path> in the project.
+files:
+  - lib/app/services/crash_service.dart
+  - lib/app/services/crash/sentry_crash_reporter.dart
+  - lib/app/services/crash/crash_pii_scrubber.dart
+
+dependencies:
+  sentry_flutter: ^9.28.0
+
+# Already in core, no action needed: get, flutter_dotenv.
+
+optional_dependencies:
+  sentry_dart_plugin: ^3.4.0
+
+env:
+  SENTRY_DSN: >-
+    Project DSN from Sentry (Settings > Projects > your project > Client Keys).
+    Empty or absent means the service stays off and every call no-ops.
+  SENTRY_ENABLE_IN_DEBUG: >-
+    Set to true to report from debug and profile builds. Absent or anything else
+    means release-only, so local runs stay quiet.
+  SENTRY_TRACES_SAMPLE_RATE: >-
+    Performance tracing sample rate, 0 to 1. Defaults to 0 (errors only).
+
+setup:
+  - >-
+    lib/bootstrap.dart, after await CacheManager.init():
+    await CrashService.to.init();
+  - >-
+    lib/bootstrap.dart, in the runZonedGuarded error handler, next to the
+    existing devPrint call:
+    unawaited(CrashService.to.recordError(error, stack, fatal: true));
+  - >-
+    Leave FlutterError.onError alone. Sentry's FlutterErrorIntegration stores
+    the handler bootstrap already installed and calls it after reporting, so
+    devPrint keeps working and nothing is reported twice.
+
+routes: >-
+  None. This module ships no screens.
+
+bindings: >-
+  None required. CrashService.to registers itself as permanent on first use,
+  which has to happen before ViewModelBinding runs. If you want it listed in
+  lib/app/bindings/view_model_binding.dart anyway, use the guarded form so the
+  instance bootstrap already initialised is not replaced:
+  if (!Get.isRegistered<CrashService>()) Get.put(CrashService(), permanent: true);
+
+core_dependencies:
+  - lib/app/core/config/env.dart
+  - lib/app/core/config/app_flavor.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/bootstrap.dart
+
+platform_config:
+  android:
+    manifest_permissions:
+      - android.permission.INTERNET
+    notes: >-
+      The template manifest has no uses-permission entries; add INTERNET inside
+      <manifest> or release builds cannot upload events. minSdk 21 and
+      compileSdk 36 are required by sentry-android 8.x; the Flutter defaults
+      already satisfy both. No manifest meta-data is needed because the DSN is
+      passed from Dart. Flutter 3.44 warns that sentry_flutter applies the
+      Kotlin Gradle Plugin; builds still succeed.
+  ios:
+    podfile: >-
+      Uncomment and set platform :ios, '13.0' in ios/Podfile (sentry-cocoa needs
+      12.0 or newer), then cd ios && pod install.
+    info_plist: >-
+      None. Sentry needs no usage-description keys.
+  release_builds: >-
+    Obfuscated Dart stack traces are unreadable without debug symbols. Build
+    with --split-debug-info and --obfuscate, then upload the symbols with the
+    optional sentry_dart_plugin. Skip both and stack traces stay readable but
+    the binary is unobfuscated.
+
+optional_integration: >-
+  Add a Dio interceptor that calls CrashService.to.addBreadcrumb on every
+  request to get an HTTP trail on each error. The scrubber drops request
+  bodies, cookies and auth headers before anything is sent.
+
+notes: >-
+  Sentry over Firebase Crashlytics: no google-services.json, no Firebase BoM,
+  works on every platform Flutter targets, and captures handled errors and
+  messages, not just fatal crashes. To swap providers, write a second
+  CrashReporter next to sentry_crash_reporter.dart and pass it to
+  CrashService.to.init(reporter: ...) - no call site changes.
+
+  The scrubber is blunt on purpose: it redacts any run of nine or more digits,
+  so long numeric ids and epoch-millis values in error messages get redacted
+  too. Tune CrashPiiScrubber.sensitiveKeys and the regexes if that hurts.

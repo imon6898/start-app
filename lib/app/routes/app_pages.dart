@@ -56,10 +56,15 @@ class AppPages {
     () => const PlaceholderScreen(title: 'Page not found'),
   );
 
-  static GetPage _page(String name, GetPageBuilder page) => GetPage(
+  static GetPage _page(
+      String name,
+      GetPageBuilder page, {
+        Transition? transition,
+        Duration? duration,
+  }) => GetPage(
     name: name,
     page: page,
-    transition: _transition,
-    transitionDuration: _duration,
+    transition: transition ?? _transition,
+    transitionDuration: duration ?? _duration,
   );
 }

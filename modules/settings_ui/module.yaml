@@ -1,0 +1,99 @@
+name: settings_ui
+description: >-
+  The settings screen the template is missing: theme switcher driving the
+  existing ThemeController, language switcher driving AppTranslations.setLocale,
+  notification toggle, app version, privacy/terms links, clear cache and logout.
+  Built from the shared widget kit, no new one-off widgets.
+
+# Copy each path from modules/settings_ui/<path> to <path> in the project.
+files:
+  - lib/app/feature/settings/settings_logic/settings_store.dart
+  - lib/app/feature/settings/settings_logic/settings_links.dart
+  - lib/app/feature/settings/settings_controllers/settings_controller.dart
+  - lib/app/feature/settings/settings_presentation/settings_screen.dart
+
+dependencies:
+  package_info_plus: "^10.2.1"
+  url_launcher: "^6.3.2"
+
+# Already in core, no action needed: get, shared_preferences, lucide_icons_flutter.
+
+env:
+  PRIVACY_POLICY_URL: >-
+    Optional. Empty or absent means the Privacy Policy row opens the in-app
+    route AppRoutes.PrivacyPolicyScreen instead of the browser.
+  TERMS_OF_SERVICE_URL: >-
+    Optional. Empty falls back to AppRoutes.TermsOfServiceScreen.
+  SUPPORT_URL: >-
+    Optional. Exposed as SettingsLinks.support for a help row you add yourself.
+
+bindings: >-
+  lib/app/bindings/view_model_binding.dart - SettingsScreen uses
+  GetBuilder<SettingsController>, so it throws on first build without this.
+  Add the import
+  '../feature/settings/settings_controllers/settings_controller.dart'
+  and inside dependencies():
+  _lazy<SettingsController>(() => SettingsController());
+
+routes: >-
+  lib/app/routes/app_routes.dart:
+  static const String SettingsScreen = '/settingsScreen';
+  lib/app/routes/app_pages.dart - add the import
+  '../feature/settings/settings_presentation/settings_screen.dart'
+  and the page
+  _page(AppRoutes.SettingsScreen, () => const SettingsScreen()).
+
+setup: >-
+  Nothing at startup. SettingsController.onInit calls SettingsStore.init()
+  itself. Optional hooks, set them once after Get.find<SettingsController>():
+  onNotificationsChanged (push SDK subscribe/unsubscribe),
+  onClearCache (your disk cache),
+  logoutRoute (defaults to AppRoutes.SigninScreen).
+
+platform_config:
+  android: >-
+    url_launcher needs a <queries> block as a direct child of <manifest> in
+    android/app/src/main/AndroidManifest.xml so https links resolve - the exact
+    XML is in the README. package_info_plus needs nothing on Android.
+  ios: >-
+    ios/Runner/Info.plist - add LSApplicationQueriesSchemes with https (and
+    http if you link to plain-HTTP pages). package_info_plus needs nothing on
+    iOS. No Podfile or AppDelegate changes.
+  notes: >-
+    package_info_plus 10.2.1 requires Dart sdk >=3.10.0 and Flutter >=3.38.1
+    (template is on Dart 3.12.2 / Flutter 3.44.8). Both plugins register
+    themselves; no MainActivity or AppDelegate edits.
+
+core_dependencies:
+  - lib/app/core/config/env.dart
+  - lib/app/core/di/user_di.dart
+  - lib/app/localization/app_translations.dart
+  - lib/app/routes/app_routes.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/services/local_data/cache_manager.dart
+  - lib/app/themes/theme_controller.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/widgets/appbar_widgets/appbar_widget.dart
+  - lib/app/widgets/feedback/custom_snack_bar.dart
+  - lib/app/widgets/feedback/delete_confirmation_dialog.dart
+  - lib/app/widgets/layout/custom_bottom_sheet.dart
+  - lib/app/widgets/layout/layout_components.dart
+
+optional_integration: >-
+  webview - swap SettingsController.openLink for CustomWebView.open to keep the
+  legal pages in-app. html_view - render a hosted policy inline instead of
+  leaving the app.
+
+notes: >-
+  The notification flag lives in the module's own SettingsStore under the key
+  "settings_ui.notificationsEnabled", so installing this needs no edit to the
+  core CacheManager. That key shares the SharedPreferences box, so
+  CacheManager.removeAll() on logout clears it too and it returns to its default
+  (on). Logout captures the theme id and locale before removeAll() and writes
+  them back, so signing out does not reset the app to English + system theme -
+  set keepPreferencesOnLogout = false if you want the full wipe. Clear cache
+  empties Flutter's in-memory ImageCache only; wire onClearCache for a disk
+  cache. The screen's strings are not in AppTranslations, so `.tr` falls through
+  to the English key - the README has a paste-ready block for en_US and bn_BD.

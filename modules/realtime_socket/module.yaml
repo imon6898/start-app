@@ -1,0 +1,115 @@
+name: realtime_socket
+description: >-
+  Socket.IO realtime client as a GetxService: auth-aware connect/disconnect,
+  automatic reconnect with exponential backoff, a reactive SocketStatus, and a
+  typed on<T>/emit registry whose handlers survive reconnects and are removed
+  on dispose. Ships an example controller + screen showing the pattern.
+
+# Copy each path from modules/realtime_socket/<path> to <path> in the project.
+files:
+  - lib/app/core/enums/socket_status.dart
+  - lib/app/services/socket_service.dart
+  - lib/app/feature/realtime/realtime_controllers/realtime_demo_controller.dart
+  - lib/app/feature/realtime/realtime_presentation/realtime_demo_screen.dart
+
+dependencies:
+  socket_io_client: "^3.1.6"
+
+# Already in core, no action needed: get, flutter_dotenv, intl,
+# shared_preferences, lucide_icons_flutter.
+
+env:
+  SOCKET_URL: >-
+    Production socket host, already present in .env. Read through
+    ApiConstant.activeSocketUrl, which picks it for prod builds.
+  SOCKET_URL_DEV: >-
+    Development socket host, already present in .env. ApiConstant
+    .activeSocketUrl picks it for dev/staging builds.
+
+setup: |
+  Env and ApiConstant already expose both hosts - no core edit is needed there:
+    Env.socketUrl / Env.socketUrlDev   (lib/app/core/config/env.dart)
+    ApiConstant.activeSocketUrl        (lib/app/services/domain/api_const.dart)
+
+  lib/bootstrap.dart - register the service after CacheManager.init() and
+  before ViewModelBinding().dependencies(), so the first token read is warm:
+    import 'app/services/socket_service.dart';
+    Get.put(SocketService(), permanent: true);
+
+  Do NOT connect in bootstrap. Connect where the session starts:
+    after a successful login  -> SocketService.to.onLogin(token);
+    on a warm start with a token -> SocketService.to.connect();
+    on logout                 -> SocketService.to.onLogout();
+
+  Optional config, set before the first connect():
+    SocketService.to.namespace = '/chat';
+    SocketService.to.authPayloadBuilder = (t) => {'Authorization': 'Bearer $t'};
+
+bindings: |
+  lib/app/bindings/view_model_binding.dart - REQUIRED while the demo controller
+  is present. test/guardrails/bindings_test.dart fails on any unregistered
+  controller under lib/app/feature, so this is not optional:
+    import '../feature/realtime/realtime_controllers/realtime_demo_controller.dart';
+    _lazy<RealtimeDemoController>(() => RealtimeDemoController());
+
+  SocketService itself is NOT registered here - it is a permanent GetxService
+  put in bootstrap.dart. Deleting the two demo files instead is fine; the
+  service and the enum stand alone.
+
+routes: >-
+  Optional, demo screen only. In AppRoutes:
+  static const String RealtimeDemoScreen = '/realtimeDemoScreen';
+  and in AppPages.pages:
+  _page(AppRoutes.RealtimeDemoScreen, () => const RealtimeDemoScreen()).
+
+platform_config: |
+  None required for the https hosts already in .env.
+
+  socket_io_client is pure Dart over package:web_socket - no native plugin, no
+  pod install, no Gradle change.
+
+  Android: INTERNET is already declared in
+    android/app/src/main/AndroidManifest.xml
+      <uses-permission android:name="android.permission.INTERNET"/>
+    A plain ws:// or http:// host would additionally need cleartext traffic.
+
+  iOS: nothing for a wss:// host. A plain ws:// host needs an
+    NSAppTransportSecurity exception in ios/Runner/Info.plist.
+
+core_dependencies:
+  - lib/app/core/config/env.dart
+  - lib/app/services/domain/api_const.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/services/local_data/cache_manager.dart
+  - lib/app/utils/main_utils.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/responsive_utils.dart
+  - lib/app/widgets/appbar_widgets/appbar_widget.dart
+  - lib/app/widgets/buttons/custom_primary_button.dart
+  - lib/app/widgets/feedback/custom_snack_bar.dart
+  - lib/app/widgets/feedback/status_badge.dart
+  - lib/app/widgets/inputs/custom_text_field.dart
+  - lib/app/widgets/layout/layout_components.dart
+
+notes: |
+  socket_status.dart is a separate file, not an addition to core enums.dart, so
+  installing never overwrites a template file.
+
+  Backoff is the socket.io manager's own: reconnectDelay doubles on each
+  attempt up to reconnectDelayMax, with a 0.5 randomization factor. Defaults
+  here are 1s -> 30s, unlimited attempts.
+
+  The token is sent two ways because server contracts differ: as an
+  Authorization header on the handshake (extraHeaders) and as the CONNECT auth
+  payload {'token': ...}. The auth payload is produced by a callback that runs
+  on every handshake, so a reconnect always carries the current token. Headers
+  are fixed per socket, which is why onLogin() rebuilds the socket instead of
+  just reconnecting.
+
+  on<T>() handlers are stored in a registry, re-attached after each rebuild and
+  detached on cancel()/onLogout(), so a controller that cancels in onClose()
+  cannot leak a handler into the next screen.
+
+  The demo talks the events 'message', 'typing' and 'ping'. Rename the
+  constants at the top of RealtimeDemoController to match your server.

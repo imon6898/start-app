@@ -1,0 +1,159 @@
+name: deep_links
+description: >-
+  Deep links, App Links and iOS Universal Links routed onto the existing
+  AppRoutes table: a declarative pattern map ('/product/:id' -> a route),
+  path + query params handed over as Get.arguments, a guard hook that bounces
+  auth-only links through sign-in and resumes them, and a fall-through to
+  AppPages.unknownRoute.
+
+# Copy each path from modules/deep_links/<path> to <path> in the project.
+files:
+  - lib/app/services/deep_link_config.dart
+  - lib/app/services/deep_link_service.dart
+  - test/services/deep_link_service_test.dart
+
+dependencies:
+  app_links: ^7.1.1
+
+# Already in core, no action needed: get, shared_preferences.
+
+setup: |
+  1. lib/bootstrap.dart - register the service before runApp so the cold-start
+     link is captured. Add the import
+       import 'app/services/deep_link_service.dart';
+     and, right before `runApp(const App());`:
+       await Get.putAsync(() => DeepLinkService().init(), permanent: true);
+     (bootstrap does not import get yet - add `import 'package:get/get.dart';`)
+
+  2. lib/app/feature/splash/splash_controllers/splash_controller.dart - the
+     splash ends in Get.offAllNamed, which would wipe any link opened earlier,
+     so dispatch the cold-start link AFTER that call. At the end of
+     _routeFromSession(), inside the try block:
+       DeepLinkService.dispatchInitial();
+
+  3. lib/app/feature/auth/auth_controllers/signin_controller.dart - resume a
+     link that the guard parked. Immediately after
+     `Get.offAllNamed(AppRoutes.DashboardScreen);` in signIn():
+       DeepLinkService.resume();
+
+     Both statics no-op when the service is not registered, so tests that skip
+     bootstrap() keep passing.
+
+  4. Edit lib/app/services/deep_link_config.dart: your schemes, your hosts,
+     your pattern -> AppRoutes map, your auth-only routes.
+
+routes: >-
+  None added. The module only navigates to routes that already exist in
+  AppRoutes / AppPages - it never registers its own. A pattern pointing at a
+  route that is not in AppPages.pages falls through to AppPages.unknownRoute,
+  which is also where unmatched links land.
+
+bindings: >-
+  Nothing to add to ViewModelBinding - DeepLinkService is a GetxService, not a
+  screen controller, and is registered once in bootstrap.dart (see Setup). If
+  you prefer to register it there instead, use
+  Get.putAsync(() => DeepLinkService().init(), permanent: true) inside
+  ViewModelBinding.dependencies() - but it is async, so the cold-start link may
+  arrive a frame late.
+
+platform_config:
+  android: |
+    android/app/src/main/AndroidManifest.xml - inside the existing
+    <activity android:name=".MainActivity"> block, next to the LAUNCHER
+    intent-filter. Replace example.com with your domain and "flutterstarter"
+    with your scheme.
+
+    <!-- Flutter's own deep-link routing would fight GetX - turn it off -->
+    <meta-data android:name="flutter_deeplinking_enabled" android:value="false" />
+
+    <!-- Verified App Links: https://example.com/... -->
+    <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="http" android:host="example.com" />
+        <data android:scheme="https" android:host="example.com" />
+        <data android:scheme="https" android:host="www.example.com" />
+    </intent-filter>
+
+    <!-- Custom scheme: flutterstarter://... -->
+    <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="flutterstarter" />
+    </intent-filter>
+
+    android:launchMode="singleTop" is already set in the template - keep it, or
+    a link will spawn a second activity instead of resuming the running one.
+
+    Host https://example.com/.well-known/assetlinks.json (application/json, no
+    redirect) with the app's package name and release SHA-256 fingerprint -
+    exact file in the README.
+  ios: |
+    1. Xcode > Runner target > Signing & Capabilities > + Capability >
+       Associated Domains, add: applinks:example.com
+       That creates ios/Runner/Runner.entitlements (the template has none yet):
+
+       <key>com.apple.developer.associated-domains</key>
+       <array>
+           <string>applinks:example.com</string>
+           <string>applinks:www.example.com</string>
+       </array>
+
+    2. ios/Runner/Info.plist - custom scheme + disable Flutter's own routing:
+
+       <key>FlutterDeepLinkingEnabled</key>
+       <false/>
+       <key>CFBundleURLTypes</key>
+       <array>
+           <dict>
+               <key>CFBundleURLName</key>
+               <string>com.easital.starter</string>
+               <key>CFBundleURLSchemes</key>
+               <array>
+                   <string>flutterstarter</string>
+               </array>
+           </dict>
+       </array>
+
+    3. No AppDelegate/SceneDelegate change needed: app_links 7 registers itself
+       as a scene delegate and the template's SceneDelegate already extends
+       FlutterSceneDelegate.
+
+    4. Host https://example.com/.well-known/apple-app-site-association (JSON,
+       no .json extension, Content-Type application/json, no redirect) with
+       your TEAMID.BUNDLEID - exact file in the README.
+  notes: >-
+    Universal Links and verified App Links only work over HTTPS from a domain
+    you control; until the hosted files are live, test with the custom scheme.
+    Android verification can be forced during development with
+    `adb shell pm verify-app-links --re-verify <package>`.
+
+core_dependencies:
+  - lib/app/routes/app_routes.dart
+  - lib/app/routes/app_pages.dart
+  - lib/app/core/di/user_di.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/services/local_data/cache_manager.dart
+
+notes: |
+  Matching: ':name' captures one segment, a trailing '*' captures the rest as
+  'rest'. Literal segments outrank ':name', which outranks '*', so
+  '/product/new' wins over '/product/:id' whatever the map order is.
+
+  Get.arguments is a Map<String, dynamic>: query params, then path params
+  (a path param wins a name clash), plus 'deepLinkUri' with the raw link.
+
+  A custom-scheme link parses its first segment as the URI host -
+  myapp://product/42 gives host 'product', path '/42'. The matcher retries with
+  the host prepended when the plain path matches nothing, so both
+  myapp://product/42 and myapp://open.my.app/product/42 reach '/product/:id'.
+
+  app_links replays the cold-start link on its stream when the app first
+  listens; the service drops that replay so dispatchInitialLink() stays the one
+  owner of the cold link. Skip step 2 of Setup and cold-start links are lost.
+
+  Verified against app_links 7.1.1 in the pub cache: AppLinks() singleton,
+  getInitialLink(), uriLinkStream. app_links 7 requires Flutter >= 3.44 and
+  iOS 13+ (the template is on Flutter 3.44.8).

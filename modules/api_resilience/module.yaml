@@ -1,0 +1,90 @@
+name: api_resilience
+description: >-
+  Dio interceptor that makes the app a well-behaved API client: in-flight GET
+  coalescing, Retry-After-aware 429 handling with a live countdown, full-jitter
+  exponential backoff for transient failures (idempotent requests only), and a
+  per-host circuit breaker. It protects your server and your UX - it is not a
+  client-side rate limiter.
+
+# Copy each path from modules/api_resilience/<path> to <path> in the project.
+files:
+  - lib/app/services/domain/retry_policy.dart
+  - lib/app/services/domain/circuit_breaker.dart
+  - lib/app/services/domain/api_resilience_interceptor.dart
+  - lib/app/services/api_resilience_service.dart
+  - lib/app/widgets/feedback/api_resilience_banner.dart
+  - test/unit/api_resilience_test.dart
+
+# No new packages. dio, get and lucide_icons_flutter are already in core.
+
+setup: |
+  1. lib/app/services/domain/api_service.dart - add the import next to the
+     existing ones:
+       import 'api_resilience_interceptor.dart';
+
+     Then, in the ApiService constructor, immediately AFTER the closing
+     `);` of the token-refresh `_dio.interceptors.add(InterceptorsWrapper(...))`
+     block and BEFORE the `if (kDebugMode) {` logger block:
+
+       // Dedup, Retry-After, jittered retries, circuit breaker.
+       _dio.interceptors.add(ApiResilienceInterceptor(_dio));
+
+     Order matters: the refresh interceptor must see 401 first. This one
+     never retries a 401, so the two do not fight.
+
+  2. OPTIONAL - register the Rx state service so screens can show a countdown.
+     In lib/bootstrap.dart before runApp, or in ViewModelBinding.dependencies():
+       Get.put(ApiResilienceService(), permanent: true);
+     Every reporter no-ops when the service is not registered, so skipping this
+     step only costs you the UI state.
+
+  3. OPTIONAL - drop the banner at the top of any screen body:
+       const ApiResilienceBanner(),
+
+  4. OPTIONAL - to reach the banner through the widgets barrel, add to
+     lib/app/widgets/feedback/feedback.dart:
+       export 'api_resilience_banner.dart';
+
+bindings: >-
+  Nothing to add to ViewModelBinding. ApiResilienceService is a GetxService,
+  not a screen controller, so test/guardrails/bindings_test.dart does not
+  require it; register it with Get.put(..., permanent: true) instead.
+
+routes: None added.
+
+platform_config: None required - no native code, no permissions.
+
+requires:
+  - lib/app/services/domain/api_service.dart
+  - lib/app/services/domain/dev_tools.dart
+  - lib/app/utils/constants/app_colors.dart
+  - lib/app/utils/constants/app_fonts.dart
+  - lib/app/utils/responsive_utils.dart
+
+notes: |
+  Rate limiting and abuse prevention are SERVER responsibilities. An attacker
+  edits the app or calls the API directly, so nothing here stops abuse. What it
+  does: keep normal use from tripping a limit, and degrade gracefully when the
+  server does limit you.
+
+  Retries are restricted to GET/HEAD/OPTIONS, or a request that opted in with
+  Options(extra: {'idempotent': true}). A blind POST retry can double-charge a
+  payment or double-create a signup.
+
+  Retry-After is honoured exactly, in both forms: delay-seconds ("120") and
+  HTTP-date ("Wed, 21 Oct 2015 07:28:00 GMT"). Anything longer than
+  ResilienceConfig.maxRetryAfterWait (60s) is surfaced to the UI instead of
+  being waited on. A two-digit RFC 850 year is rejected rather than trusted -
+  dart:io HttpDate reads "94" as year 0094.
+
+  Backoff uses full jitter: delay = random(0, min(base * 2^attempt, 8s)). Fixed
+  backoff makes every client retry in lockstep, which is the thundering herd.
+
+  The in-flight dedup map and the default circuit breaker are static, because
+  the template builds a new ApiService() (and a new Dio) per call - per-instance
+  state would never coalesce anything or see a failure streak. Clear both with
+  ApiResilienceInterceptor.resetShared(), e.g. on sign-out.
+
+  test/unit/api_resilience_test.dart covers both Retry-After forms, the jitter
+  bounds, the idempotency rules, the circuit-breaker lifecycle and the
+  interceptor itself against a fake adapter - 32 tests, no network.

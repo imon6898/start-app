@@ -1,15 +1,15 @@
 name: secure_storage
 description: >-
   Encrypted auth-token storage. SecureStore keeps the access and refresh token
-  in Android EncryptedSharedPreferences / the iOS Keychain instead of plaintext
-  SharedPreferences, and migrates any existing plaintext token once, on launch.
+  in the Android KeyStore / iOS Keychain instead of plaintext SharedPreferences,
+  and migrates any existing plaintext token once, on the next launch.
 
 # Copy each path from modules/secure_storage/<path> to <path> in the project.
 files:
   - lib/app/services/local_data/secure_store.dart
 
 dependencies:
-  flutter_secure_storage: ^9.2.4
+  flutter_secure_storage: ^11.1.1
 
 # Already in core, no action needed: shared_preferences.
 
@@ -24,15 +24,18 @@ setup:
     "await CacheManager.init();". It runs the one-time plaintext migration and
     warms the in-memory copy the sync accessors read.
   - >-
-    Then move the six token call sites off CacheManager onto SecureStore. The
-    getters become async, so the callers must await. The README has the exact
-    diff for api_service.dart, user_di.dart, splash_controller.dart,
-    signin_controller.dart and verify_otp_controller.dart.
+    Then move the token call sites off CacheManager onto SecureStore, adding
+    an import of secure_store.dart to each of the five files. The getters
+    become async, so the callers must await, EXCEPT on the first-frame path
+    (ApiService constructor, UserDi.isLoggedIn, SplashScreenController) which
+    must read tokenSync. The README has the exact diff for api_service.dart,
+    user_di.dart, splash_controller.dart, signin_controller.dart and
+    verify_otp_controller.dart.
   - >-
     Optional cleanup once every caller has moved: delete the token and
-    refreshToken members from CacheManager and their CacheKeys enum entries.
-    Leave CacheKeys.token spelled "token" until the migration has shipped to
-    every install, the migration reads that exact key.
+    refreshToken members from CacheManager. Keep the CacheKeys.token and
+    CacheKeys.refreshToken enum entries until the migration has shipped to
+    every install, the migration drains those exact key names.
 
 routes: None. This module adds no screens.
 
@@ -41,36 +44,46 @@ bindings: None. SecureStore is a static class, like CacheManager.
 platform_config:
   android:
     min_sdk: >-
-      Set minSdk to 23 or higher in android/app/build.gradle.kts.
-      EncryptedSharedPreferences needs API 23. Below it the plugin silently
-      falls back to its own AES plus RSA-KeyStore scheme, which is weaker.
+      flutter_secure_storage 11 sets minSdk 24, so set minSdk to 24 or higher
+      in android/app/build.gradle.kts if you have pinned it lower.
     backup: >-
-      Auto Backup copies the encrypted prefs file but not the KeyStore key, so
-      a restored app reads garbage. Either set android:allowBackup="false" on
-      <application>, or add a backup rule excluding the
-      FlutterSecureStorage shared-prefs file.
+      Auto Backup copies the encrypted prefs file but never the KeyStore key,
+      so a restored app reads garbage. Either set android:allowBackup="false"
+      on <application>, or add a backup rule excluding the plugin's
+      shared-prefs file. resetOnError is on, so the worst case is a forced
+      re-login rather than a crash loop.
     proguard: >-
-      No extra rules. The plugin ships its own consumer-proguard file.
+      No extra rules. The plugin ships its own consumer rules.
   ios:
     entitlements: >-
-      None for iOS. Signing already grants the default keychain access group.
-      Keychain items survive an app uninstall, clearAll on logout matters.
-    podfile: platform :ios, '12.0' or higher, then pod install
+      None. Signing already grants the default keychain access group. Keychain
+      items survive an app uninstall, which is why logout must call clearAll().
+    podfile: platform :ios, '13.0' or higher, then pod install
   macos:
     entitlements: >-
       macOS only. Add the Keychain Sharing capability to
       macos/Runner/DebugProfile.entitlements and Release.entitlements.
   web: >-
-    flutter_secure_storage_web stores AES-GCM ciphertext in localStorage with
-    the key in IndexedDB. Anything running in the page can read both. Treat web
-    as unencrypted.
+    flutter_secure_storage_web keeps AES-GCM ciphertext in localStorage with
+    the wrapping key in IndexedDB. Anything running in the page can read both.
+    Treat web as unencrypted.
 
 notes: >-
-  The getters are Futures. "CacheManager.token" becomes "await SecureStore.token",
-  which is the whole cost of this module. For the one call site that cannot
-  await, the Dio BaseOptions block in ApiService's constructor, use
-  SecureStore.tokenSync, valid after init(). clearAll() deletes only the two
-  keys this module owns, it does not call deleteAll(), so other plugins keeping
-  secrets in the same store are untouched. The migration flag
-  secure_store_migrated_v1 lives in SharedPreferences, so CacheManager.removeAll()
-  on logout clears it and the next launch re-runs a no-op migration. Harmless.
+  The getters are Futures. "CacheManager.token" becomes
+  "await SecureStore.token", and that is the whole cost of this module. For the
+  one call site that cannot await, the Dio BaseOptions block in the ApiService
+  constructor, use SecureStore.tokenSync, which is valid after init().
+  flutter_secure_storage 10 removed the encryptedSharedPreferences option
+  because androidx.security.crypto is deprecated, so on v11 Android storage is
+  the plugin's own AES-GCM values wrapped by an RSA-OAEP KeyStore key. Version
+  9 is NOT usable here: its windows implementation pins win32 ^5 and the
+  template's file_picker ^13 pulls win32 ^6, so pub cannot resolve.
+  In flutter's testWidgets the binding uses fake async, so a
+  flutter_secure_storage MethodChannel call never completes and never throws -
+  this is why splash_controller must use tokenSync, otherwise
+  test/widget/app_boot_test.dart hangs and fails.
+  clearAll() deletes only the two keys this module owns, it never calls
+  deleteAll(), so other plugins keeping secrets in the same store are
+  untouched. The migration flag secure_store_migrated_v1 lives in
+  SharedPreferences, so CacheManager.removeAll() on logout clears it and the
+  next launch re-runs a no-op migration. Harmless.
